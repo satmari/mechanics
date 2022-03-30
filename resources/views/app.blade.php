@@ -56,6 +56,7 @@
 						@if (Auth::user()->name == 'mechanics' OR Auth::user()->name == 'admin')
 							<li><a href="{{ url('/machines_in_inteos') }}">Machines in Inteos </a></li>
 							<li><a href="{{ url('/update_from_inteos') }}">Update machines </a></li>
+							<li><a href="{{ url('/machines_table') }}">Machines table</a></li>
 						@endif
 					@endif
 				</ul>
@@ -270,6 +271,7 @@ $(function() {
 	$(".sortable2 ul:nth-child(2) li").each(function(index) {
   		console.log("trdt");
 	});
+
 
 });
 </script>

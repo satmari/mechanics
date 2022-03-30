@@ -19,19 +19,19 @@
 					@if (Auth::user()->name == 'mechanics' OR Auth::user()->name == 'admin')
 					<div class="panel-body">
 						<div class="">
-							<a href="{{url('/#')}}" class="btn btn-success btn-lg center-block"><br>Function 1<br><br></a>
+							<a href="{{url('/move_machine_in_plant')}}" class="btn btn-success btn-lg center-block"><br>MOVE MACHINE <br><i>in the same plant</i><br><br></a>
 						</div>
 					</div>
 					<br>
 					<div class="panel-body">
 						<div class="">
-							<a href="{{url('/#')}}" class="btn btn-primary btn-lg center-block"><br>Function 2<br><br></a>
+							<a href="{{url('/transfer_machine')}}" class="btn btn-primary btn-lg center-block"><br>TRANSFER MACHINE <br> <i>between plants</i><br><br></a>
 						</div>
 					</div>
 					<br>
 					<div class="panel-body">
 						<div class="">
-							<a href="{{url('/#')}}" class="btn btn-warning btn-lg center-block"><br>Function 3<br><br></a>
+							<a href="{{url('/transfer_machines_among_plants')}}" class="btn btn-warning btn-lg center-block"><br>TRANSFER MACHINES <br><i>among plants</i><br><br></a>
 						</div>
 					</div>
 					@endif

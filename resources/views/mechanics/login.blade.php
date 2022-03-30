@@ -15,7 +15,6 @@
 								
 				<div class="panel-body">
 					<p>Mechanics PIN code (Inteos)</p>
-					{{-- {!! Form::number('pin', null, ['id' => 'pin', 'class' => 'form-control', 'autofocus' => 'autofocus']) !!} --}}
 					{!! Form::input('number', 'pin', null, ['id' => 'pin', 'class' => 'form-control', 'autofocus' => 'autofocus']) !!}
 				</div>
 				

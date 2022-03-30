@@ -51,9 +51,23 @@ Route::get('mechanics','mechanicsController@index');
 Route::post('logincheck','mechanicsController@logincheck');
 Route::get('afterlogin','mechanicsController@afterlogin');
 
+Route::get('move_machine_in_plant','mechanicsController@move_machine_in_plant');
+Route::post('move_machine_in_plant_loc','mechanicsController@move_machine_in_plant_loc');
+Route::post('move_machine_in_plant_scan','mechanicsController@move_machine_in_plant_scan');
+Route::get('move_machine_in_plant_remove/{id}/{ses}', 'mechanicsController@move_machine_in_plant_remove');
+Route::get('move_machine_in_plant_confirm/{session}', 'mechanicsController@move_machine_in_plant_confirm');
+
+Route::get('transfer_machine','mechanicsController@transfer_machine');
+Route::post('transfer_machine_from','mechanicsController@transfer_machine_from');
+Route::post('transfer_machine_to','mechanicsController@transfer_machine_to');
+Route::post('transfer_machine_scan','mechanicsController@transfer_machine_scan');
+Route::get('transfer_machine_remove/{id}/{ses}', 'mechanicsController@transfer_machine_remove');
+Route::get('transfer_machine_confirm/{session}', 'mechanicsController@transfer_machine_confirm');
+
 // Admin
 Route::get('machines_in_inteos','adminController@machines_in_inteos');
 Route::get('update_from_inteos','adminController@update_from_inteos');
+Route::get('machines_table','adminController@machines_table');
 
 // Machine
 
