@@ -144,6 +144,13 @@ class HomeController extends Controller {
 			  	return redirect('/mechanics');
 		 	}
 
+		 	if ($user->is('magacin')) { 
+			    // if user has at least one role
+			    // dd("MEC");
+			    // $msg = "Hi MS";
+			  	return redirect('/mechanics');
+		 	}
+
 		}
 
 		return view('home');

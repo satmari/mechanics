@@ -27,21 +27,34 @@
 				{!! Form::open(['method'=>'POST', 'url'=>'transfer_machine_to']) !!}
 				{!! Form::hidden('plant_from', $plant_from, ['class' => 'form-control']) !!}
 	            {!! Form::hidden('plant_to', 'SUBOTICA', ['class' => 'form-control']) !!}
-				{!! Form::submit('SUBOTICA', ['class' => 'btn  btn-success center-block']) !!}
-		        @include('errors.list')
+	            @if ($plant_from == 'SUBOTICA')
+	            	{!! Form::submit('SUBOTICA', ['class' => 'btn btn-success btn-lg center-block disabled']) !!}
+	            @else
+	            	{!! Form::submit('SUBOTICA', ['class' => 'btn btn-success btn-lg center-block']) !!}
+	            @endif
+				@include('errors.list')
 	            {!! Form::close() !!}
 	            <br>
 	            {!! Form::open(['method'=>'POST', 'url'=>'transfer_machine_to']) !!}
 	            {!! Form::hidden('plant_from', $plant_from, ['class' => 'form-control']) !!}
 	            {!! Form::hidden('plant_to', 'KIKINDA', ['class' => 'form-control']) !!}
-				{!! Form::submit('KIKINDA', ['class' => 'btn  btn-warning center-block']) !!}
-		        @include('errors.list')
+	             @if ($plant_from == 'KIKINDA')
+	            	{!! Form::submit('&nbsp;&nbsp;KIKINDA&nbsp;&nbsp;', ['class' => 'btn btn-warning btn-lg center-block disabled']) !!}
+	            @else
+	            	{!! Form::submit('&nbsp;&nbsp;KIKINDA&nbsp;&nbsp;', ['class' => 'btn btn-warning btn-lg center-block']) !!}
+	            @endif
+				@include('errors.list')
 	            {!! Form::close() !!}
 	            <br>
 	            {!! Form::open(['method'=>'POST', 'url'=>'transfer_machine_to']) !!}
 	            {!! Form::hidden('plant_from', $plant_from, ['class' => 'form-control']) !!}
 	            {!! Form::hidden('plant_to', 'SENTA', ['class' => 'form-control']) !!}
-				{!! Form::submit('SENTA', ['class' => 'btn  btn-danger center-block']) !!}
+	            @if ($plant_from == 'SENTA')
+	            	{!! Form::submit('&nbsp;&nbsp;&nbsp;SENTA&nbsp;&nbsp;&nbsp;', ['class' => 'btn btn-danger btn-lg center-block disabled']) !!}
+	            @else
+	            	{!! Form::submit('&nbsp;&nbsp;&nbsp;SENTA&nbsp;&nbsp;&nbsp;', ['class' => 'btn btn-danger btn-lg center-block']) !!}
+	            @endif
+				
 		        @include('errors.list')
 	            {!! Form::close() !!}
 	            <br>
@@ -52,10 +65,12 @@
 					<div class="panel-body">
 		                <p><b>To</b> plant:</p>
 		            	{!! Form::text('plant_to', '' , ['class' => 'form-control', 'autofocus' => 'autofocus']) !!}
+		            	
+
 					</div>
 					<br>
-					{!! Form::submit('Next', ['class' => 'btn  btn-success center-block']) !!}
-		            <br>
+					{!! Form::submit('Next', ['class' => 'btn  btn-success btn-lg center-block']) !!}
+		            <!-- <br> -->
 
 	            @include('errors.list')
 	            {!! Form::close() !!}
@@ -72,7 +87,7 @@
 				@endif
 
 	            <hr>
-	            <a href="{{ url('afterlogin/') }}" class="btn btn-default center-bl ock">Back</a>
+	            <a href="{{ url('afterlogin/') }}" class="btn btn-default btn-lg center-bl ock">Back</a>
 	            <br>
 	            <br>
 			</div>	

@@ -18,9 +18,13 @@ class CreateTempTransferMachinesTable extends Migration {
 
 			$table->string('os_id');
 			$table->string('os');
+			$table->string('brand')->nullable();
+			$table->string('type')->nullable();
+			$table->string('code')->nullable();
 			$table->string('plant_from');
 			$table->string('plant_to');
 			$table->string('ses');
+			$table->string('transfer_doc')->nullable();
 			
 			$table->timestamps();
 		});

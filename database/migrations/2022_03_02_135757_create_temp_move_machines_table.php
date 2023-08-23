@@ -18,6 +18,9 @@ class CreateTempMoveMachinesTable extends Migration {
 
 			$table->string('os_id');
 			$table->string('os');
+			$table->string('brand')->nullable();
+			$table->string('type')->nullable();
+			$table->string('code')->nullable();
 			$table->string('location')->nullable();
 			$table->string('ses');
 			$table->string('new_location_id');

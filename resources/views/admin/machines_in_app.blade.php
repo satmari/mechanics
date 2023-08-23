@@ -44,13 +44,14 @@
                             <th><span style=""><b>Brand</b></span></th>
                             <th><span style=""><b>Code</b></span></th>
                             <th><span style=""><b>Type</b></span></th>
-                            <th><span style=""><b>Remark SU</b></span></th>
-                            <th><span style=""><b>Remark KI</b></span></th>
+                            <th><span style=""><b>Remark</b></span></th>
+                            <th><span style=""><b>Comments in APP</b></span></th>
                             <th><span style=""><b>Inteos destination</b></span></th>
                             <th><span style=""><b>Inteos machine status</b></span></th>
                             <th><span style=""><b>Inteos line</b></span></th>
-                            <th><span style="color:red;"><big><b>App Status</span></b></big></th>
+                            <th data-sortable="true"><span style="color:red;"><big><b>App Status</span></b></big></th>
                             <th><span style="color:blue;"><big><b>App Location</span></b></big></th>
+                            <th data-sortable="true"><span style=""><b>Plant</b></span></th>
                                                        
                         </tr>
                     </thead>
@@ -62,14 +63,22 @@
                             <td>{{ $req->brand }}</td>
                             <td>{{ $req->code }}</td>
                             <td>{{ $req->type }}</td>
-                            <td>{{ $req->remark_su }}</td>
-                            <td>{{ $req->remark_ki }}</td>
+
+                            
+                            <td style="width:10px !important;">{{ $req->remark_su }} {{ $req->remark_ki }}</td>
+                            
+
+                            {{-- <td><big>{{ str_replace("|", " \\n", $req->comment) }}</big></td> --}}
+                            {{-- <td><big>{{ nl2br($req->comment) }}</big></td> --}}
+                            <td><big>{{ $req->comment }}</big></td>
                             <td>{{ $req->inteos_status }}</td>
                             <td>{{ $req->inteos_machine_status }}</td>
                             <td>{{ $req->inteos_line }}</td>
                             
                             <td><span style="color:red;"><big><b>{{ $req->machine_status }}</b></big></span></td>
                             <td><span style="color:blue;"><big><b>{{ $req->location }}</b></big></span></td>
+
+                            <td>{{ $req->plant }}</td>
                             
                         </tr>
                     @endforeach

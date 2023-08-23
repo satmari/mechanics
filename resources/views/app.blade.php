@@ -16,6 +16,10 @@
 	<link href="{{ asset('/css/jquery-ui.min.css') }}" rel='stylesheet' type='text/css'>
 	<link href="{{ asset('/css/app.css') }}" rel='stylesheet' type='text/css'>
 	<link href="{{ asset('/css/choosen.css') }}" rel='stylesheet' type='text/css'>
+
+	<link href="{{ asset('/css/select2.min.css') }}" rel='stylesheet' type='text/css'>
+	<link rel="manifest" href="{{ asset('/manifest.json') }}">
+
 	
 	<!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
 	<!-- WARNING: Respond.js doesn't work if you view the page via file:// -->
@@ -34,7 +38,7 @@
 					<span class="icon-bar"></span>
 					<span class="icon-bar"></span>
 				</button>
-				<a class="navbar-brand" href="{{ url('/') }}">Mechanics App</a>
+				<a class="navbar-brand" href="{{ url('#') }}">Mechanics App</a>
 			</div>
 
 			<div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
@@ -54,7 +58,7 @@
 					@if (Auth::guest())
 					@else
 						@if (Auth::user()->name == 'mechanics' OR Auth::user()->name == 'admin')
-							<li><a href="{{ url('/machines_in_inteos') }}">Machines in Inteos </a></li>
+							<!-- <li><a href="{{ url('/machines_in_inteos') }}">Machines in Inteos </a></li> -->
 							<li><a href="{{ url('/update_from_inteos') }}">Update machines </a></li>
 							<li><a href="{{ url('/machines_table') }}">Machines table</a></li>
 						@endif
@@ -84,6 +88,7 @@
 	<!-- Scripts -->
 	<script src="{{ asset('/js/jquery.min.js') }}" type="text/javascript" ></script>
 	<script src="{{ asset('/js/jquery-ui.min.js') }}" type="text/javascript" ></script>
+	<script src="{{ asset('/js/jquery-2.1.1.min.js') }}" type="text/javascript" ></script>
     <script src="{{ asset('/js/bootstrap.min.js') }}" type="text/javascript" ></script>
     <script src="{{ asset('/js/bootstrap-table.js') }}" type="text/javascript" ></script>
 	
@@ -96,6 +101,11 @@
 	<script src="{{ asset('/js/FileSaver.min.js') }}" type="text/javascript" ></script>
 	<script src="{{ asset('/js/bootstrap-table-export.js') }}" type="text/javascript" ></script>
 	<script src="{{ asset('/js/choosen.js') }}" type="text/javascript" ></script>
+	<script src="{{ asset('/js/select2.min.js') }}" type="text/javascript" ></script>
+
+	
+	
+	
 
 	<script type="text/javascript">
 	   $.ajaxSetup({
@@ -104,12 +114,24 @@
 	       }
 	   });
 	</script>
+	<script type="text/javascript">
+		$(document).ready(function() {
+			
+			$("#select2").select2({
+			  
+			});
+		});
+	</script>
+
+
 
 <script type="text/javascript">
 $(function() {
 // console.log(5 + 6);
-
+	
+	
 	$(function() {
+
 		$('.box').change(function(){
 			// console.log(5 + 6);
 	        var total = 0;
@@ -126,8 +148,8 @@ $(function() {
 	        $('#total').text(total);
 	    });
 	});
-
-    	
+ 	
+ 	/*
 	$('#item').autocomplete({
 		minLength: 1,
 		autoFocus: true,
@@ -153,6 +175,7 @@ $(function() {
 		autoFocus: true,
 		source: '{{ URL('getpordata')}}'
 	});
+	*/
 
 	$('#filter').keyup(function () {
 
@@ -170,15 +193,20 @@ $(function() {
 	// });
 	// $('#myTabs a:first').tab('show') // Select first tab
 
-	$(function() {
-    	$( "#datepicker" ).datepicker();
-  	});
+	// $(function() {
+ //    	$( "#datepicker" ).datepicker();
+ //  	});
   	
 	$('#sort').bootstrapTable({
     	
 	});
 
 	$(".chosen").chosen();
+
+	// In your Javascript (external .js resource or <script> tag)
+	$(document).ready(function() {
+		$('.js-example-basic-single').select2();
+	});
 
 
 	//$('.table tr').each(function(){
@@ -234,10 +262,10 @@ $(function() {
 <script>
   $(document).ready(function() {
 
-  	$("#sortable1 , #sortable2 , #sortable3 , #sortable4 , #sortable5, #sortable6, #sortable7, #sortable7, #sortable8, #sortable9" ).sortable({
-    	connectWith: ".connectedSortable_ul_1",
-    	dropOnEmpty: true
-    }).disableSelection();
+  	// $("#sortable1 , #sortable2 , #sortable3 , #sortable4 , #sortable5, #sortable6, #sortable7, #sortable7, #sortable8, #sortable9" ).sortable({
+   //  	connectWith: ".connectedSortable_ul_1",
+   //  	dropOnEmpty: true
+   //  }).disableSelection();
 
   //   var $tabs=$('#table-draggable2')
   //   $( "tbody.connectedSortable_table" )

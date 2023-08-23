@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Redirect;
 use App\plant;
 use App\area;
 use App\location;
+use App\machines;
 use DB;
 
 use App\User;
@@ -256,13 +257,19 @@ class settingsController extends Controller {
 		
 		// try {
 			$table = location::findOrFail($id);
+
+			$ex_location = $table->location;
+
 			$table->location = $location;
 			$table->area_id = $area_id;
 			$table->save();
+
 		// }
 		// catch (\Illuminate\Database\QueryException $e) {
 		// 	dd("Problem to save, try again");
 		// }
+
+		$table2 = machines::where(['location' => $ex_location])->update(['location' => $location]);
 
 		return Redirect::to('/location');
 	}

@@ -26,19 +26,19 @@
 				<br>
 	            {!! Form::open(['method'=>'POST', 'url'=>'transfer_machine_from']) !!}
 	            {!! Form::hidden('plant_from', 'SUBOTICA', ['class' => 'form-control']) !!}
-				{!! Form::submit('SUBOTICA', ['class' => 'btn  btn-success center-block']) !!}
+				{!! Form::submit('SUBOTICA', ['class' => 'btn btn-success btn-lg center-block']) !!}
 		        @include('errors.list')
 	            {!! Form::close() !!}
 	            <br>
 	            {!! Form::open(['method'=>'POST', 'url'=>'transfer_machine_from']) !!}
 	            {!! Form::hidden('plant_from', 'KIKINDA', ['class' => 'form-control']) !!}
-				{!! Form::submit('KIKINDA', ['class' => 'btn  btn-warning center-block']) !!}
+				{!! Form::submit('&nbsp;&nbsp;&nbsp;KIKINDA&nbsp;&nbsp;', ['class' => 'btn btn-warning btn-lg center-block']) !!}
 		        @include('errors.list')
 	            {!! Form::close() !!}
 	            <br>
 	            {!! Form::open(['method'=>'POST', 'url'=>'transfer_machine_from']) !!}
 	            {!! Form::hidden('plant_from', 'SENTA', ['class' => 'form-control']) !!}
-				{!! Form::submit('SENTA', ['class' => 'btn  btn-danger center-block']) !!}
+				{!! Form::submit('&nbsp;&nbsp;&nbsp;&nbsp;SENTA&nbsp;&nbsp;&nbsp;&nbsp;', ['class' => 'btn btn-danger btn-lg center-block']) !!}
 		        @include('errors.list')
 	            {!! Form::close() !!}
 	            <br>
@@ -47,10 +47,11 @@
 	            {!! Form::open(['method'=>'POST', 'url'=>'transfer_machine_from']) !!}
 					<div class="panel-body">
 		                <p><b>From</b> plant:</p>
-		            	{!! Form::text('plant_from', '' , ['class' => 'form-control', 'autofocus' => 'autofocus']) !!}
+		            	{!! Form::text('plant_from', '' , ['class' => 'form-control', 'autofocus' => 'autofocus']) !!} 
+		            	{{-- {!! Form::select('plant_from', array(''=>'','SUBOTICA'=>'SUBOTICA','KIKINDA'=>'KIKINDA','SENTA'=>'SENTA'), null, array('class' => 'form-control')); !!} --}}
 					</div>
 					<br>
-					{!! Form::submit('Next', ['class' => 'btn  btn-success center-block']) !!}
+					{!! Form::submit('Next', ['class' => 'btn  btn-success btn-lg center-block']) !!}
 		            <br>
 
 	            @include('errors.list')
@@ -68,7 +69,7 @@
 				@endif
 
 	            <hr>
-	            <a href="{{ url('afterlogin/') }}" class="btn btn-default center-bl ock">Back</a>
+	            <a href="{{ url('afterlogin/') }}" class="btn btn-default btn-lg center-bl ock">Back</a>
 	            <br>
 	            <br>
 			</div>	

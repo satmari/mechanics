@@ -1,0 +1,13 @@
+{ 
+
+  "name": "Mechanics app", 
+
+  "short_name": "Mechanics app", 
+
+  "start_url": "http://172.27.161.173/mechanics/", 
+
+  "display": "standalone"
+
+  
+
+}

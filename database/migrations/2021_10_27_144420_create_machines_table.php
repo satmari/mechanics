@@ -37,6 +37,11 @@ class CreateMachinesTable extends Migration {
 
 			$table->string('racing')->nullable();
 
+			$table->string('write_off_reason')->nullable();
+			$table->string('buyer')->nullable();
+			$table->string('give_doc')->nullable();
+     		$table->string('return_doc')->nullable();
+
 			$table->timestamps();
 		});
 	}

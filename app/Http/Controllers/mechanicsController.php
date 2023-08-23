@@ -16,6 +16,15 @@ use App\location;
 use App\machines;
 use App\temp_move_machine;
 use App\temp_transfer_machine;
+use App\temp_give_machine;
+use App\temp_return_machine;
+use App\temp_adjust_machine;
+use App\temp_fix_machine;
+use App\temp_writeoff_machine;
+use App\temp_sell_machine;
+use App\comment;
+use App\transfer_machine_log;
+use App\borrow_machine_log;
 use DB;
 
 use App\User;
@@ -34,9 +43,8 @@ class mechanicsController extends Controller {
 	// 	// Session::set('leaderid', NULL);
 	// }
 
-	public function index()
-	{
-		//
+	public function index() {
+		
 		// dd('test');
 		$leaderid = Session::get('leaderid');
 		if (isset($leaderid)) {
@@ -51,8 +59,8 @@ class mechanicsController extends Controller {
 				// return view('Mechanics.login');		
 			}
 		}
-		// return view('Mechanics.login');
-		return Redirect::to('afterlogin');
+		return view('Mechanics.login');
+		// return Redirect::to('afterlogin');
 
 	}
 
@@ -112,7 +120,17 @@ class mechanicsController extends Controller {
 	public function move_machine_in_plant() {
 
 		// dd('cao');
-		return view('Mechanics.move_machine_in_plant');
+		$locations = DB::table('locations')
+		            ->join('areas', 'areas.id', '=', 'locations.area_id')
+		            ->join('plants', 'plants.id', '=', 'areas.plant_id')
+		            ->where('areas.area', '=', 'STOCK_S')
+		            ->orWhere('areas.area', '=', 'STOCK_K')
+		            ->orWhere('areas.area', '=', 'STOCK_Z')
+		            ->select('locations.id', 'locations.location', 'areas.area', 'plants.plant')
+		            ->orderBy('plants.plant', 'desc')
+		            ->get();
+
+		return view('Mechanics.move_machine_in_plant', compact('locations'));
 	}
 
 	public function move_machine_in_plant_loc(Request $request) {
@@ -121,11 +139,29 @@ class mechanicsController extends Controller {
 		$input = $request->all(); 
 		// dd($input);
 
-		if (!isset($input['location_new'])) {
-			return view('Mechanics.move_machine_in_plant');
-		}
 
-		$location_new = strtoupper($input['location_new']);
+		$locations = DB::table('locations')
+		            ->join('areas', 'areas.id', '=', 'locations.area_id')
+		            ->join('plants', 'plants.id', '=', 'areas.plant_id')
+		            ->where('areas.area', '=', 'STOCK_S')
+		            ->orWhere('areas.area', '=', 'STOCK_K')
+		            ->orWhere('areas.area', '=', 'STOCK_Z')
+		            ->select('locations.id', 'locations.location', 'areas.area', 'plants.plant')
+		            ->orderBy('plants.plant', 'desc')
+		            ->get();
+
+		if (!empty($input['location_new1'])) {
+			$location_new = $input['location_new1'];
+		} elseif (!empty($input['location_new2'])) {
+			$location_new = $input['location_new2'];
+		} elseif (!empty($input['location_new3'])) {
+			$location_new = $input['location_new3'];
+		} else {
+			$msge = 'Please scan or select location';
+			return view('Mechanics.move_machine_in_plant', compact('locations', 'msge'));
+		}
+		
+		$location_new = strtoupper($location_new);
 		// dd($location_new);
 
 		try {
@@ -147,7 +183,8 @@ class mechanicsController extends Controller {
 		            ->get();
 
 		    } catch(\Illuminate\Database\QueryException $ex){ 
-		    	return view('Mechanics.move_machine_in_plant');
+		    	$msge = 'Location does not exist';
+		    	return view('Mechanics.move_machine_in_plant', compact('msge','locations'));
 		    }
 
 		}
@@ -156,7 +193,7 @@ class mechanicsController extends Controller {
 		if (!isset($find_location[0]->id)) {
 			// dd("Location does not exist");
 			$msge = 'Location does not exist';
-			return view('Mechanics.move_machine_in_plant', compact('msge'));
+			return view('Mechanics.move_machine_in_plant', compact('msge','locations'));
 		} else {
 
 			$new_location_id = $find_location[0]->id;
@@ -165,10 +202,21 @@ class mechanicsController extends Controller {
 			$new_plant = $find_location[0]->plant;
 
 			$session = Session::getId();
-			$data = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM temp_move_machines WHERE ses = '".$session."' order by id desc"));
-			$msg = "Please scan OS (machine)";
+			$msg = "Please scan machine";
 
-			return view('Mechanics.move_machine_in_plant_scan',compact('data','new_location_id', 'new_location', 'new_area', 'new_plant', 'session' ,'msg'));
+			$machines = DB::table('machines')
+			            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+			            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+			            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+			            ->where('plants.plant', '=', $new_plant)
+			            ->where('machines.location', '!=', $new_location)
+			            ->where('machines.machine_status', '!=', 'TO_REPAIR')
+			            ->select('machines.id', 'machines.os', 'machines.location', 'machines.brand', 'machines.type', 'machines.code', 'plants.plant')
+			            ->get();
+			// dd($machines);
+
+            $data = DB::table('temp_move_machines')->where('ses', '=', $session)->get();
+			return view('Mechanics.move_machine_in_plant_scan',compact('data','new_location_id', 'new_location', 'new_area', 'new_plant', 'session' ,'msg','machines'));
 		}
 	}
 
@@ -179,109 +227,150 @@ class mechanicsController extends Controller {
 		// dd($input);
 
 		$session = Session::getId();
+		$data = DB::table('temp_move_machines')->where('ses', '=', $session)->get();
 		$new_location_id = $input['new_location_id'];
 		$session = $input['session'];
 		$new_location = strtoupper($input['new_location']);
 		$new_area = strtoupper($input['new_area']);
 		$new_plant = strtoupper($input['new_plant']);
 		
+		if (!empty($input['machine_temp1'])) {
+			$machine_temp = $input['machine_temp1'];
+		} elseif (!empty($input['machine_temp2'])) {
+			$machine_temp = $input['machine_temp2'];
+		} else {
+			$machine_temp = NULL;
+		}
+
 		// $machine_temp = $input['machine_temp'];
 		// dd($location);
+
+		$machines = DB::table('machines')
+			            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+			            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+			            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+			            ->where('plants.plant', '=', $new_plant)
+			            ->where('machines.location', '!=', $new_location)
+			            ->where('machines.machine_status', '!=', 'TO_REPAIR')
+			            ->select('machines.id', 'machines.os', 'machines.location', 'machines.brand', 'machines.type', 'machines.code', 'plants.plant')
+			            ->get();
+		// dd($machines);
 		
-		if (isset($input['machine_temp'])) {
-			$machine_temp = strtoupper($input['machine_temp']);
+		if (isset($machine_temp)) {
+
+			$machine_temp = strtoupper($machine_temp);
 
 			if (strlen($machine_temp) == 7 OR strlen($machine_temp) == 8) {
 				// dd($machine_temp);
 
-				// if (machines::where('os', '=', $machine_temp)->exists()) {
-				// 	// dd('exist');
-				// } else {
-				// 	// dd('not exist');	
-				// 	$data = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM temp_move_machines WHERE ses = '".$session."' order by id desc"));
-				// 	$msge = 'OS (machine) does not exist in table';
-				// 	return view('Mechanics.move_machine_in_plant_scan', compact('data','location_id', 'location', 'area', 'plant', 'session', 'msge'));
-				// }
-
-				try {
-					$exist = DB::connection('sqlsrv')->select(DB::raw("SELECT m.id, m.os, m.location, p.plant
-					FROM machines as m
-					LEFT JOIN locations as l ON l.id = m.location_id
-					LEFT JOIN areas as a ON a.id = l.area_id
-					LEFT JOIN plants as p ON p.id = a.plant_id
-					WHERE os = '".$machine_temp."' "));
-
-				// 	// dd($exist);
-				} catch(\Illuminate\Database\QueryException $ex){ 
-
-					try {
-						$exist = DB::table('machines')
-			            ->join('locations', 'locations.id', '=', 'machines.location_id')
-			            ->join('areas', 'areas.id', '=', 'locations.area_id')
-			            ->join('plants', 'plants.id', '=', 'areas.plant_id')
-			            ->where('machines.os', '=', $machine_temp)
-			            ->select('machines.id', 'machines.os', 'machines.location', 'plants.plant')
-			            ->get();
-			            // dd($exist);
-			        } catch(\Illuminate\Database\QueryException $ex){ 
-
-			        	$exist = DB::table('machines')
-			            ->join('locations', 'locations.id', '=', 'machines.location_id')
-			            ->join('areas', 'areas.id', '=', 'locations.area_id')
-			            ->join('plants', 'plants.id', '=', 'areas.plant_id')
-			            ->where('machines.os', '=', $machine_temp)
-			            ->select('machines.id', 'machines.os', 'machines.location', 'plants.plant')
-			            ->get();
-			            // dd($exist);
-			        }
-				}
-				
+				$exist = DB::table('machines')
+	            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+	            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+	            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+	            ->where('machines.os', '=', $machine_temp)
+	            ->where('machines.machine_status', '!=', 'TO_REPAIR')
+	            ->select('machines.id', 'machines.os', 'machines.location', 'machines.brand', 'machines.type', 'machines.code', 'plants.plant')
+	            ->get();
+	            // dd($exist);
+			    
 				if (isset($exist[0]->id)) {
 
 					if (($new_plant == $exist[0]->plant) /*OR ($exist[0]->plant == NULL)*/)  {
 
 						$data_temp = DB::connection('sqlsrv')->select(DB::raw("SELECT os, ses FROM temp_move_machines WHERE os = '".$exist[0]->os."' AND ses = '".$session."' "));
 						if (isset($data_temp[0]->os)) {
-							// $data = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM temp_move_machines WHERE ses = '".$session."' order by id desc"));
+							
 							$data = DB::table('temp_move_machines')->where('ses', '=', $session)->get();
 							$msge = 'Machine already scaned';
-							return view('Mechanics.move_machine_in_plant_scan', compact('data','new_location_id', 'new_location', 'new_area', 'new_plant', 'session', 'msge'));							
+							return view('Mechanics.move_machine_in_plant_scan', compact('data','new_location_id', 'new_location', 'new_area', 'new_plant', 'session','machines','msge'));
 						}
 
 					} else {
 
-						// $data = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM temp_move_machines WHERE ses = '".$session."' order by id desc"));
 						$data = DB::table('temp_move_machines')->where('ses', '=', $session)->get();
 						if ($exist[0]->plant == NULL) {
 							$exist[0]->plant = 'NOT DEFINED';
 						}
-						$msge = 'Destination location is in '.$new_plant.' and machine is in '.$exist[0]->plant;
-						return view('Mechanics.move_machine_in_plant_scan', compact('data','new_location_id', 'new_location', 'new_area', 'new_plant', 'session', 'msge'));						
+						$data = DB::table('temp_move_machines')->where('ses', '=', $session)->get();
+						$msge = 'Destination location is in '.$new_plant.' plant, but machine is in '.$exist[0]->plant.' plant' ;
+						return view('Mechanics.move_machine_in_plant_scan', compact('data','new_location_id', 'new_location', 'new_area', 'new_plant', 'session','machines','msge'));						
 					}
 				} else {
-					// $data = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM temp_move_machines WHERE ses = '".$session."' order by id desc"));
+					
 					$data = DB::table('temp_move_machines')->where('ses', '=', $session)->get();
-					$msge = 'OS (machine) does not exist in table';
-					return view('Mechanics.move_machine_in_plant_scan', compact('data','new_location_id', 'new_location', 'new_area', 'new_plant', 'session', 'msge'));
+					$msge = 'Machine does not exist in table or habe status ON_REPAIR ';
+					return view('Mechanics.move_machine_in_plant_scan', compact('data','new_location_id', 'new_location', 'new_area', 'new_plant', 'session','machines','msge'));
 				}
 			} else {
 
-				// $data = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM temp_move_machines WHERE ses = '".$session."' order by id desc"));
 				$data = DB::table('temp_move_machines')->where('ses', '=', $session)->get();
-				$msge = 'OS barcode must have 7 or 8 characters';
-				return view('Mechanics.move_machine_in_plant_scan', compact('data','new_location_id', 'new_location', 'new_area', 'new_plant', 'session', 'msge'));
+				$msge = 'Machine barcode must have 7 or 8 characters';
+
+				return view('Mechanics.move_machine_in_plant_scan', compact('data','new_location_id', 'new_location', 'new_area', 'new_plant', 'session','machines','msge'));
 			}
 		} else {
-			dd('Error, zovi IT.');
+			// dd('Error, zovi IT.');
+			$data = DB::table('temp_move_machines')->where('ses', '=', $session)->get();
+			$msge = 'Please add machine or scan machine barcode';
+
+			return view('Mechanics.move_machine_in_plant_scan', compact('data','new_location_id', 'new_location', 'new_area', 'new_plant', 'session','machines','msge'));
+		}
+		// dd('change');
+
+		// CHECK IF MACHINE HAS ACTIVE DOWNITME
+		$check_dt_in_inteos = DB::connection('sqlsrv2')->select(DB::raw("SELECT 
+			d.[MachNum]
+		  	,l.[ModNam]
+			,o.[Name] as LineLeader
+			,mc.[Name] as Mechanic
+		  FROM [BdkCLZG].[dbo].[CNF_ModStatDecl] as d
+		  LEFT JOIN [BdkCLZG].[dbo].[CNF_Modules] as l ON l.Module = d.Module
+		  LEFT JOIN [BdkCLZG].[dbo].[WEA_PersData] as o ON o.Cod = d.leaderkey
+		  LEFT JOIN [BdkCLZG].[dbo].[WEA_PersData] as mc ON mc.Cod = d.MecKey
+		  WHERE MachCod != '-1' AND d.MachNum = '".$machine_temp."'
+		  
+		  UNION 
+		  
+          SELECT 
+			d.[MachNum]
+		  	,l.[ModNam]
+			,o.[Name] as LineLeader
+			,mc.[Name]  as Mechanic
+		  FROM [172.27.161.221\INTEOSKKA].[BdkCLZKKA].[dbo].[CNF_ModStatDecl] as d
+		  LEFT JOIN [172.27.161.221\INTEOSKKA].[BdkCLZKKA].[dbo].[CNF_Modules] as l ON l.Module = d.Module
+		  LEFT JOIN [172.27.161.221\INTEOSKKA].[BdkCLZKKA].[dbo].[WEA_PersData] as o ON o.Cod = d.leaderkey
+		  LEFT JOIN [172.27.161.221\INTEOSKKA].[BdkCLZKKA].[dbo].[WEA_PersData] as mc ON mc.Cod = d.MecKey
+		  WHERE MachCod != '-1' AND d.MachNum = '".$machine_temp."'
+		  "));
+
+		if (isset($check_dt_in_inteos[0])) {
+			// printf('This machine has some active downtime');
+			// dd($check_dt_in_inteos[0]);
+
+			$MachNum = $check_dt_in_inteos[0]->MachNum;
+			$ModNam = $check_dt_in_inteos[0]->ModNam;
+			$LineLeader = $check_dt_in_inteos[0]->LineLeader;
+			$Mechanic = $check_dt_in_inteos[0]->Mechanic;
+
+			if ($Mechanic != '') {
+				$msge = 'This machine '.$MachNum.' has ACTIVE downtime on line '.$ModNam.' by LineLeader: '.$LineLeader .' and Mechanic: '.$Mechanic.' ';
+			} else {
+				$msge = 'This machine '.$MachNum.' has ACTIVE downtime on line '.$ModNam.' by LineLeader: '.$LineLeader .'.  ';	
+			}
+			// dd($msge);
+			$data = DB::table('temp_move_machines')->where('ses', '=', $session)->get();
+			
+			return view('Mechanics.move_machine_in_plant_scan', compact('data','new_location_id', 'new_location', 'new_area', 'new_plant', 'session','machines','msge'));
 		}
 
-		// dd('change');
 		// SAVE TO TEMP TABLE
-
 		$table = temp_move_machine::firstOrNew(['os' => $machine_temp]);
 		$table->os_id =  $exist[0]->id;
 		$table->location =  $exist[0]->location;
 		$table->os =  $machine_temp;
+		$table->brand =  $exist[0]->brand;
+		$table->type =  $exist[0]->type;
+		$table->code =  $exist[0]->code;
 		$table->ses =  Session::getId();
 		$table->new_location_id =  $new_location_id;
 		$table->new_location =  $new_location;
@@ -289,10 +378,9 @@ class mechanicsController extends Controller {
 		$table->new_plant =  $new_plant;
 		$table->save();		
 
-		$data = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM temp_move_machines WHERE ses = '".$session."' order by id desc"));
-		$msg = 'OS added';
-		return view('Mechanics.move_machine_in_plant_scan', compact('data','new_location_id', 'new_location', 'new_area', 'new_plant', 'session', 'msg'));
-
+		$data = DB::table('temp_move_machines')->where('ses', '=', $session)->get();
+		$msg = 'Machine '.$machine_temp.' added to the list';
+		return view('Mechanics.move_machine_in_plant_scan', compact('data','new_location_id','new_location','new_area','new_plant','session','machines','msg'));
 	}
 
 	public function move_machine_in_plant_remove($id, $ses) {
@@ -304,30 +392,37 @@ class mechanicsController extends Controller {
 		$new_plant = $ses_data[0]->new_plant;
 		$session = $ses;
 
+		$machines = DB::table('machines')
+			            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+			            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+			            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+			            ->where('plants.plant', '=', $new_plant)
+			            ->where('machines.location', '!=', $new_location)
+			            ->select('machines.id', 'machines.os', 'machines.location', 'machines.brand', 'machines.type', 'machines.code', 'plants.plant')
+			            ->get();
+
+		$machine_to_remove = DB::table('temp_move_machines')
+			            ->where('temp_move_machines.id', '=', $id)
+			            ->select('temp_move_machines.id', 'temp_move_machines.os')
+			            ->get();
+		// dd($machine_to_remove[0]->os);
+
 		DB::connection('sqlsrv')->delete(DB::raw("DELETE FROM temp_move_machines WHERE ses = '".$ses."' AND id = '".$id."' "));
 		
-		// $data = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM temp_move_machines WHERE ses = '".$ses."' order by id desc"));
 		$data = DB::table('temp_move_machines')->where('ses', '=', $session)->get();
-		$msg = 'OS removed';
-		return view('Mechanics.move_machine_in_plant_scan', compact('data','new_location_id', 'new_location', 'new_area', 'new_plant', 'session', 'msg'));
+		$msg = 'Machine '.$machine_to_remove[0]->os.' removed from the list';
+		return view('Mechanics.move_machine_in_plant_scan', compact('data','new_location_id', 'new_location','new_area','new_plant','session','machines','msg'));
 	}
 
 	public function move_machine_in_plant_confirm($session) {
 		//
 		$session;
-
-		try {
-			$ses_data = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM temp_move_machines WHERE ses = '".$session."' order by id desc"));	
-		} catch(\Illuminate\Database\QueryException $ex){ 
-			$ses_data = DB::table('temp_move_machines')->where('ses', '=', $session)->get();
-		}
+		$ses_data = DB::table('temp_move_machines')->where('ses', '=', $session)->get();
 		// dd($ses_data);
 	
 		if (!isset($ses_data[0]->id)) {
 
-			// $session = Session::getId();
-			// $data = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM temp_move_machines WHERE ses = '".$session."' order by id desc"));
-			$msge = 'List is empty, first choose destination location?';
+			$msge = 'List was empty, first choose destination location?';
 			// return view('Mechanics.move_machine_in_plant_scan', compact('data','new_location_id', 'new_location', 'new_area', 'new_plant', 'session', 'msge'));
 			return view('Mechanics.move_machine_in_plant', compact('msge'));
 		}
@@ -343,24 +438,86 @@ class mechanicsController extends Controller {
 			$os = $ses_data[$i]->os;
 			// dd($os);
 
-			try {
-				$table = machines::where(['os' => $os])->update(['location' => $new_location, 'location_id' => $new_location_id]);
-			} catch(\Illuminate\Database\QueryException $ex){ 
-				dd('problem to save');
+			if (substr($new_area,0,3) == 'LIN' ) {
+				$machine_status = 'IN_LINE';
+			} elseif (substr($new_area,0,3) == 'STO' ) {
+				$machine_status = 'STOCK';
 			}
+
+			// try {
+				if ($new_location == 'REPAIRING_SU') {
+					
+					$table = machines::where(['os' => $os])->update(['location' => $new_location, 'location_id' => $new_location_id, 'machine_status' => 'TO_REPAIR']);
+
+				} elseif ($new_location == 'REPAIRING_KI') {
+
+					$table = machines::where(['os' => $os])->update(['location' => $new_location, 'location_id' => $new_location_id, 'machine_status' => 'TO_REPAIR']);
+
+				} elseif ($new_location == 'REPAIRING_SE') {
+
+					$table = machines::where(['os' => $os])->update(['location' => $new_location, 'location_id' => $new_location_id, 'machine_status' => 'TO_REPAIR']);
+
+				} else {
+
+					$table = machines::where(['os' => $os])->update(['location' => $new_location, 'location_id' => $new_location_id, 'machine_status' => $machine_status]);
+				}
+
+			// } catch(\Illuminate\Database\QueryException $ex){ 
+			// 	dd('problem to save');
+			// }
+				
+				DB::connection('sqlsrv2')->update(DB::raw("UPDATE [BdkCLZG].[dbo].[CNF_ModMach]
+  				SET [BdkCLZG].[dbo].[CNF_ModMach].[MaStat] = 1 , [BdkCLZG].[dbo].[CNF_ModMach].[MdCod] = NULL
+  				FROM [BdkCLZG].[dbo].[CNF_ModMach] as mm
+  				JOIN [BdkCLZG].[dbo].[CNF_MachPool] as mp ON mm.[MdCod] = mp.[Cod]
+  				WHERE mp.[MachNum] = '".$os."' "));
+
+				DB::connection('sqlsrv2')->update(DB::raw("UPDATE [172.27.161.221\INTEOSKKA].[BdkCLZKKA].[dbo].[CNF_ModMach]
+  				SET mm.[MaStat] = 1 , mm.[MdCod] = NULL
+  				FROM [172.27.161.221\INTEOSKKA].[BdkCLZKKA].[dbo].[CNF_ModMach] as mm
+  				JOIN [172.27.161.221\INTEOSKKA].[BdkCLZKKA].[dbo].[CNF_MachPool] as mp ON mp.[Cod] = mm.[MdCod]
+  				WHERE mp.[MachNum] = '".$os."' "));
 		}
+
 		DB::connection('sqlsrv')->delete(DB::raw("DELETE FROM temp_move_machines WHERE ses = '".$session."' "));
 
-		// $data = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM temp_move_machines WHERE ses = '".$session."' order by id desc"));
-		// $msg = 'Successfully saved';
-		// return view('Mechanics.move_machine_in_plant_scan', compact('data','new_location_id', 'new_location', 'new_area', 'new_plant', 'session', 'msg'));
-		// return Redirect::to('/move_machine_in_plant');
+		
+
+
+		$locations = DB::table('locations')
+		            ->join('areas', 'areas.id', '=', 'locations.area_id')
+		            ->join('plants', 'plants.id', '=', 'areas.plant_id')
+		            ->select('locations.id', 'locations.location', 'areas.area', 'plants.plant')
+		            ->orderBy('plants.plant', 'desc')
+		            ->get();
 
 		$msgs = 'Successfully saved';
-		return view('Mechanics.move_machine_in_plant', compact('msgs'));
+		return view('Mechanics.move_machine_in_plant', compact('msgs','locations'));
 	}
 
-// CHANGE MACHINE STATUS
+	public function move_machine_in_plant_cancel($session) {
+		//
+		$session;
+		$ses_data = DB::table('temp_move_machines')->where('ses', '=', $session)->get();
+		// dd($ses_data);
+
+		DB::connection('sqlsrv')->delete(DB::raw("DELETE FROM temp_move_machines WHERE ses = '".$session."' "));
+
+		$locations = DB::table('locations')
+		            ->join('areas', 'areas.id', '=', 'locations.area_id')
+		            ->join('plants', 'plants.id', '=', 'areas.plant_id')
+		            ->where('areas.area', '=', 'STOCK_S')
+		            ->orWhere('areas.area', '=', 'STOCK_K')
+		            ->orWhere('areas.area', '=', 'STOCK_Z')
+		            ->select('locations.id', 'locations.location', 'areas.area', 'plants.plant')
+		            ->orderBy('plants.plant', 'desc')
+		            ->get();
+
+		$msgs = 'Successfully canceled';
+		return view('Mechanics.move_machine_in_plant', compact('msgs','locations'));	
+	}
+
+// TRANSFER MACHINE
 
 	public function transfer_machine()	{
 		# 
@@ -375,61 +532,129 @@ class mechanicsController extends Controller {
 
 		$plant_from = strtoupper($input['plant_from']);
 
+		if ($plant_from != 'SUBOTICA' AND $plant_from != 'KIKINDA' AND $plant_from != 'SENTA') {
+			$msge = 'Souce plant not valid, please choose SUBOTICA,KIKINDA or SENTA.';
+			return view('Mechanics.transfer_machine', compact('msge'));
+		}
+
 		return view('Mechanics.transfer_machine_to', compact('plant_from'));
 	}
 
 	public function transfer_machine_to(Request $request) {
 		//
-		$this->validate($request, ['plant_from' => 'required','plant_to' => 'required']);
+		// $this->validate($request, ['plant_from' => 'required','plant_to' => 'required']);
 		$input = $request->all(); 
 		// dd($input);
 
 		$plant_from = strtoupper($input['plant_from']);
 		$plant_to = strtoupper($input['plant_to']);
+
+		if (empty($input['plant_to'])) {
+			$msge = 'Please choose destination plant';
+			return view('Mechanics.transfer_machine_to', compact('plant_from','msge'));
+		}
+
+		if ($plant_from == $plant_to) {
+			$msge = 'Destination plant should be different from source plant';
+			return view('Mechanics.transfer_machine_to', compact('plant_from','msge'));
+		}
+
+		if ($plant_to != 'SUBOTICA' AND $plant_to != 'KIKINDA' AND $plant_to != 'SENTA') {
+			$msge = 'Destination plant not valid.';
+			return view('Mechanics.transfer_machine_to', compact('plant_from','msge'));
+		}
+
 		$session = Session::getId();
 
 		$data = DB::table('temp_transfer_machines')->where('ses', '=', $session)->get();
-		$msg = "Please scan OS (machine)";
+		$msg = "Please scan Machine";
 
-		return view('Mechanics.transfer_machine_scan', compact('data','plant_from','plant_to','session','msg'));
+		$machines = DB::table('machines')
+			            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+			            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+			            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+			            ->where('plants.plant', '=', $plant_from)
+			            ->select('machines.id', 'machines.os', 'machines.location', 'machines.brand', 'machines.type', 'machines.code', 'plants.plant')
+			            ->get();
+
+		return view('Mechanics.transfer_machine_scan', compact('data','plant_from','plant_to','session','machines','msg'));
 	}
 
 	public function transfer_machine_scan(Request $request) {
 		//
-		// $this->validate($request, ['plant_from' => 'required','plant_to' => 'required']);
 		$input = $request->all(); 
+		// dd($input);
 		$session = Session::getId();
-		
-		$machine_temp = strtoupper($input['machine_temp']);
+		$data = DB::table('temp_transfer_machines')->where('ses', '=', $session)->get();
+		// dd($data);
+
+		if ($input['transfer_doc'] != "") {
+			$transfer_doc = $input['transfer_doc'];	
+		} else {
+			// dd('problem');
+			$plant_from = strtoupper($input['plant_from']);
+			$plant_to = strtoupper($input['plant_to']);
+			$machines = DB::table('machines')
+			            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+			            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+			            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+			            ->where('plants.plant', '=', $plant_from)
+			            ->select('machines.id', 'machines.os', 'machines.location', 'machines.brand', 'machines.type', 'machines.code', 'plants.plant')
+			            ->get();
+
+			$data = DB::table('temp_transfer_machines')->where('ses', '=', $session)->get();
+			$msge = 'Please insert first document number (otpremnica)';
+			return view('Mechanics.transfer_machine_scan', compact('data','plant_from','plant_to','transfer_doc','session','machines','msge'));
+		}
+
+		if (!empty($input['machine_temp1'])) {
+			$machine_temp = $input['machine_temp1'];
+		} elseif (!empty($input['machine_temp2'])) {
+			$machine_temp = $input['machine_temp2'];
+		} else {
+			// dd('problem');
+			$plant_from = strtoupper($input['plant_from']);
+			$plant_to = strtoupper($input['plant_to']);
+			$machines = DB::table('machines')
+			            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+			            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+			            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+			            ->where('plants.plant', '=', $plant_from)
+			            ->select('machines.id', 'machines.os', 'machines.location', 'machines.brand', 'machines.type', 'machines.code', 'plants.plant')
+			            ->get();
+
+			$data = DB::table('temp_transfer_machines')->where('ses', '=', $session)->get();
+			$msge = 'Please scan or select machine';
+			return view('Mechanics.transfer_machine_scan', compact('data','plant_from','plant_to','transfer_doc','session','machines','msge'));
+		}
+
+		$machine_temp = strtoupper($machine_temp);
 		// dd($machine_temp);
 
 		if (isset($input['plant_from']) AND isset($input['plant_to'])) {
 			$plant_from = strtoupper($input['plant_from']);
 			$plant_to = strtoupper($input['plant_to']);
 
+			$machines = DB::table('machines')
+			            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+			            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+			            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+			            ->where('plants.plant', '=', $plant_from)
+			            ->select('machines.id', 'machines.os', 'machines.location', 'machines.brand', 'machines.type', 'machines.code', 'plants.plant')
+			            ->get();
+
 			if (strlen($machine_temp) == 7 OR strlen($machine_temp) == 8) {
 				// dd($machine_temp);
 
-				try {
-					$exist = DB::connection('sqlsrv')->select(DB::raw("SELECT m.id, m.os, m.location, p.plant
-					FROM machines as m
-					LEFT JOIN locations as l ON l.id = m.location_id
-					LEFT JOIN areas as a ON a.id = l.area_id
-					LEFT JOIN plants as p ON p.id = a.plant_id
-					WHERE os = '".$machine_temp."' "));
-				 	// dd($exist);
-
-				} catch(\Illuminate\Database\QueryException $ex){ 
-
-					$exist = DB::table('machines')
-		            ->join('locations', 'locations.id', '=', 'machines.location_id')
-		            ->join('areas', 'areas.id', '=', 'locations.area_id')
-		            ->join('plants', 'plants.id', '=', 'areas.plant_id')
-		            ->where('machines.os', '=', $machine_temp)
-		            ->select('machines.id', 'machines.os', 'machines.location', 'plants.plant')
-		            ->get();
-		            // dd($exist);
-				}
+				$exist = DB::table('machines')
+	            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+	            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+	            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+	            ->where('machines.os', '=', $machine_temp)
+	            ->select('machines.id', 'machines.os', 'machines.location','machines.brand','machines.type','machines.code', 'plants.plant')
+	            ->get();
+	            // dd($exist);
+				
 				
 				if (isset($exist[0]->id)) {
 
@@ -437,32 +662,32 @@ class mechanicsController extends Controller {
 
 						$data_temp = DB::connection('sqlsrv')->select(DB::raw("SELECT os, ses FROM temp_transfer_machines WHERE os = '".$exist[0]->os."' AND ses = '".$session."' "));
 						if (isset($data_temp[0]->os)) {
-							// $data = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM temp_transfer_machines WHERE ses = '".$session."' order by id desc"));
+							
 							$data = DB::table('temp_transfer_machines')->where('ses', '=', $session)->get();
 							$msge = 'Machine already scaned';
-							return view('Mechanics.transfer_machine_scan', compact('data','plant_from','plant_to','session','msge'));
+							return view('Mechanics.transfer_machine_scan', compact('data','plant_from','plant_to','transfer_doc','session','machines','msge'));
 						}
 					} else {
 
-						// $data = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM temp_transfer_machines WHERE ses = '".$session."' order by id desc"));
+						
 						$data = DB::table('temp_transfer_machines')->where('ses', '=', $session)->get();
 						if ($exist[0]->plant == NULL) {
 							$exist[0]->plant = 'NOT DEFINED';
 						}
-						$msge = 'Machine is in '.$exist[0]->plant.' but inserted plant from is '.$plant_from. ' ! ';
-						return view('Mechanics.transfer_machine_scan', compact('data','plant_from','plant_to','session','msge'));
+						$msge = 'Machine is in '.$exist[0]->plant.' plant but source plant (from) is '.$plant_from. ' .';
+						return view('Mechanics.transfer_machine_scan', compact('data','plant_from','plant_to','transfer_doc','session','machines','msge'));
 					}
 				} else {
-					// $data = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM temp_transfer_machines WHERE ses = '".$session."' order by id desc"));
+					
 					$data = DB::table('temp_transfer_machines')->where('ses', '=', $session)->get();
-					$msge = 'OS (machine) does not exist in table';
-					return view('Mechanics.transfer_machine_scan', compact('data','plant_from','plant_to','session','msge'));
+					$msge = 'Machine does not exist in table';
+					return view('Mechanics.transfer_machine_scan', compact('data','plant_from','plant_to','transfer_doc','session','machines','msge'));
 				}
 			} else {
-				// $data = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM temp_transfer_machines WHERE ses = '".$session."' order by id desc"));
+				
 				$data = DB::table('temp_transfer_machines')->where('ses', '=', $session)->get();
-				$msge = 'OS barcode must have 7 or 8 characters';
-				return view('Mechanics.transfer_machine_scan', compact('data','plant_from','plant_to','session','msge'));
+				$msge = 'Machine barcode must have 7 or 8 characters';
+				return view('Mechanics.transfer_machine_scan', compact('data','plant_from','plant_to','transfer_doc','session','machines','msge'));
 			}
 		} else {
 			dd('Error, zovi IT.');
@@ -471,14 +696,18 @@ class mechanicsController extends Controller {
 		$table = temp_transfer_machine::firstOrNew(['os' => strtoupper($machine_temp)]);
 		$table->os_id =  $exist[0]->id;
 		$table->os =  strtoupper($machine_temp);
+		$table->brand =  $exist[0]->brand;
+		$table->type =  $exist[0]->type;
+		$table->code =  $exist[0]->code;
 		$table->plant_from =  strtoupper($plant_from);
 		$table->plant_to =  strtoupper($plant_to);
 		$table->ses =  Session::getId();
+		$table->transfer_doc =  $transfer_doc;
 		$table->save();
 
-		$data = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM temp_transfer_machines WHERE ses = '".$session."' order by id desc"));
-		$msg = 'OS added';
-		return view('Mechanics.transfer_machine_scan', compact('data','plant_from','plant_to','session','msg'));
+		$data = DB::table('temp_transfer_machines')->where('ses', '=', $session)->get();
+		$msg = 'Machine '.$machine_temp.' added to the list';
+		return view('Mechanics.transfer_machine_scan', compact('data','plant_from','plant_to','transfer_doc','session','machines','msg'));
 	}
 
 	public function transfer_machine_remove($id, $session) {
@@ -487,56 +716,78 @@ class mechanicsController extends Controller {
 		$ses_data = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM temp_transfer_machines WHERE ses = '".$ses."' order by id desc"));
 		$plant_from = strtoupper($ses_data[0]->plant_from);
 		$plant_to = strtoupper($ses_data[0]->plant_to);
+		$transfer_doc = $ses_data[0]->transfer_doc;
+
+		$machines = DB::table('machines')
+			            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+			            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+			            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+			            ->where('plants.plant', '=', $plant_from)
+			            ->select('machines.id', 'machines.os', 'machines.location', 'machines.brand', 'machines.type', 'machines.code', 'plants.plant')
+			            ->get();
+
+	    $machine_to_remove = DB::table('temp_transfer_machines')
+			            ->where('temp_transfer_machines.id', '=', $id)
+			            ->select('temp_transfer_machines.id', 'temp_transfer_machines.os')
+			            ->get();
+		// dd($machine_to_remove);
 
 		DB::connection('sqlsrv')->delete(DB::raw("DELETE FROM temp_transfer_machines WHERE ses = '".$ses."' AND id = '".$id."' "));
-		
-		// $data = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM temp_move_machines WHERE ses = '".$ses."' order by id desc"));
+
 		$data = DB::table('temp_transfer_machines')->where('ses', '=', $session)->get();
-		$msg = 'OS removed';
-		return view('Mechanics.transfer_machine_scan', compact('data','plant_from','plant_to','session','msg'));
+		$msg = 'Machine '.$machine_to_remove[0]->os.' removed from the list';
+		return view('Mechanics.transfer_machine_scan', compact('data','plant_from','plant_to','transfer_doc','session','machines','msg'));
 	}
 
 	public function transfer_machine_confirm($session) {
 		//
 		$session;
-
-		try {
-			$ses_data = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM temp_transfer_machines WHERE ses = '".$session."' order by id desc"));	
-		} catch(\Illuminate\Database\QueryException $ex){ 
-			$ses_data = DB::table('temp_transfer_machines')->where('ses', '=', $session)->get();
-		}
+		$ses_data = DB::table('temp_transfer_machines')->where('ses', '=', $session)->get();
 		// dd($ses_data);
 	
 		if (!isset($ses_data[0]->id)) {
 
-			$msge = 'List is empty, first choose transfer From (plant)?';
+			$msge = 'List was empty, first choose transfer From (plant)?';
 			return view('Mechanics.transfer_machine', compact('msge'));
 		}
 
 		$plant_from = strtoupper($ses_data[0]->plant_from);
 		$plant_to = strtoupper($ses_data[0]->plant_to);
 		$plant = DB::table('plants')->where(['plant' => $plant_to])->get();
+		$transfer_doc = $ses_data[0]->transfer_doc;
 
 		if ($plant[0]->plant == 'SUBOTICA') {
 
 			$plant_new = $plant[0]->plant;
 			$plant_id = $plant[0]->id;
 			$new_location = 'RECEIVING_SU';
-			$new_location_id = 118;
+			$machine_status = 'STOCK';
+			$new_location_id = DB::table('locations')->where('location', '=', 'RECEIVING_SU')->get();
+			$new_location_id = $new_location_id[0]->id;
+			$inteos_status = 'SU';
+			// dd($new_location_id);
 
-		} elseif (($plant[0]->plant == 'KIKINDA')) {
+		} elseif ($plant[0]->plant == 'KIKINDA') {
 
 			$plant_new = $plant[0]->plant;
 			$plant_id = $plant[0]->id;
 			$new_location = 'RECEIVING_KI';
-			$new_location_id = 119;
+			$machine_status = 'STOCK';
+			$new_location_id = DB::table('locations')->where('location', '=', 'RECEIVING_KI')->get();
+			$new_location_id = $new_location_id[0]->id;
+			$inteos_status = 'KI';
+			// dd($new_location_id);
 
-		} elseif (($plant[0]->plant == 'SENTA')) {
+		} elseif ($plant[0]->plant == 'SENTA') {
 
 			$plant_new = $plant[0]->plant;
 			$plant_id = $plant[0]->id;
 			$new_location = 'RECEIVING_SE';
-			$new_location_id = 120;
+			$machine_status = 'STOCK';
+			$new_location_id = DB::table('locations')->where('location', '=', 'RECEIVING_SE')->get();
+			$new_location_id = $new_location_id[0]->id;
+			$inteos_status = 'SU';
+			// dd($new_location_id);
 
 		} else {
 			dd('Plant not recognized');
@@ -544,30 +795,2032 @@ class mechanicsController extends Controller {
 		// dd($plant_new);
 
 		for ($i=0; $i < count($ses_data); $i++) {
-			
+
+			$os_id = $ses_data[$i]->os_id;
 			$os = $ses_data[$i]->os;
+			$brand = $ses_data[$i]->brand;
+			$type = $ses_data[$i]->type;
+			$code = $ses_data[$i]->code;
 			// dd($os);
-			try {
+			// try {
+				$table = machines::where(['os' => $os])->update(['location' => $new_location, 'location_id' => $new_location_id, 'machine_status' => $machine_status, 'inteos_status' => $inteos_status]);
+				
+				/* write to log */
 
-				$table = machines::where(['os' => $os])->update(['location' => $new_location, 'location_id' => $new_location_id]);
-				DB::connection('sqlsrv')->delete(DB::raw("DELETE FROM temp_transfer_machines WHERE ses = '".$session."' "));
+				$table = new transfer_machine_log;
+				$table->os_id = $os_id;
+				$table->os = $os;
+				$table->brand = $brand;
+				$table->type = $type;
+				$table->code = $code;
+				$table->function = 'TRANSFER';
+				$table->destination = $new_location;
+				$table->doc = $transfer_doc;
+				$table->plant_from = $plant_from;
+				$table->plant_to = $plant_to;
+				$table->save();
 
-			} catch(\Illuminate\Database\QueryException $ex){
-				dd('problem to save');
-			}
+				/* turn on and off in inteos */
+				if (($plant_from == 'SUBOTICA') OR ($plant_from == 'SENTA')) {
+
+
+					if (($plant_to == 'SUBOTICA') OR ($plant_to == 'SENTA')) {
+
+						
+					} else {
+
+						// $update_su_inteos = DB::connection('sqlsrv2')->delete(DB::raw("UPDATE [BdkCLZG].[dbo].[CNF_MachPool]  SET NotAct = '1'  WHERE MachNum = '". $os."' "));
+						$update_su_inteos = DB::connection('sqlsrv2')->delete(DB::raw("UPDATE [172.27.161.221\INTEOSKKA].[BdkCLZKKA].[dbo].[CNF_MachPool]
+	  						SET from_plant.[Remark] = to_plant.[Remark], from_plant.[NotAct] = NULL
+						  	FROM [172.27.161.221\INTEOSKKA].[BdkCLZKKA].[dbo].[CNF_MachPool] as from_plant
+						  	JOIN [BdkCLZG].[dbo].[CNF_MachPool] as to_plant ON from_plant.[MachNum] = to_plant.[MachNum]
+						  	WHERE from_plant.[MachNum] = '". $os."' "));
+
+						//$update_ki_inteos = DB::connection('sqlsrv2')->delete(DB::raw("UPDATE [172.27.161.221\INTEOSKKA].[BdkCLZKKA].[dbo].[CNF_MachPool]  SET NotAct = NULL  WHERE MachNum = '". $os."' "));
+						$update_ki_inteos = DB::connection('sqlsrv2')->delete(DB::raw("UPDATE [BdkCLZG].[dbo].[CNF_MachPool] 
+						  	SET [Remark] = '', NotAct = '1'
+						  	WHERE [MachNum] = '". $os."' "));
+					}
+					
+				} else {
+					// $update_su_inteos = DB::connection('sqlsrv2')->delete(DB::raw("UPDATE [BdkCLZG].[dbo].[CNF_MachPool]  SET NotAct = NULL  WHERE MachNum = '". $os."' "));
+					$update_su_inteos = DB::connection('sqlsrv2')->delete(DB::raw("UPDATE [BdkCLZG].[dbo].[CNF_MachPool]
+						SET [BdkCLZG].[dbo].[CNF_MachPool].[Remark] = to_plant.[Remark], [BdkCLZG].[dbo].[CNF_MachPool].[NotAct] = NULL
+						FROM [BdkCLZG].[dbo].[CNF_MachPool] as from_plant
+						JOIN [172.27.161.221\INTEOSKKA].[BdkCLZKKA].[dbo].[CNF_MachPool] as to_plant ON from_plant.[MachNum] = to_plant.[MachNum]
+						WHERE from_plant.[MachNum] = '". $os."' "));
+
+					// $update_ki_inteos = DB::connection('sqlsrv2')->delete(DB::raw("UPDATE [172.27.161.221\INTEOSKKA].[BdkCLZKKA].[dbo].[CNF_MachPool]  SET NotAct = '1'  WHERE MachNum = '". $os."' "));
+					$update_ki_inteos = DB::connection('sqlsrv2')->delete(DB::raw("UPDATE [172.27.161.221\INTEOSKKA].[BdkCLZKKA].[dbo].[CNF_MachPool]
+						SET [Remark] = '', NotAct = '1'
+						WHERE [MachNum] = '". $os."' "));
+				}
+				
+				
+			// } catch(\Illuminate\Database\QueryException $ex){
+			// 	dd('problem to save');
+			// }
 		}
+		DB::connection('sqlsrv')->delete(DB::raw("DELETE FROM temp_transfer_machines WHERE ses = '".$session."' "));
 		
-		// dd('stop');
-		// $data = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM temp_move_machines WHERE ses = '".$session."' order by id desc"));
-		// $msg = 'Successfully saved';
-		// return view('Mechanics.move_machine_in_plant_scan', compact('data','new_location_id', 'new_location', 'new_area', 'new_plant', 'session', 'msg'));
-		// return Redirect::to('/move_machine_in_plant');
-
 		$msgs = 'Successfully saved';
 		return view('Mechanics.transfer_machine', compact('msgs'));
 	}
 
+	public function transfer_machine_cancel($session) {
+		//
+		$session;
+		$ses_data = DB::table('temp_transfer_machines')->where('ses', '=', $session)->get();
+		// dd($ses_data);
 
-// TRANSFER MACHINES AMONG PLANTS
+		DB::connection('sqlsrv')->delete(DB::raw("DELETE FROM temp_transfer_machines WHERE ses = '".$session."' "));
 
+		$locations = DB::table('locations')
+		            ->join('areas', 'areas.id', '=', 'locations.area_id')
+		            ->join('plants', 'plants.id', '=', 'areas.plant_id')
+		            ->select('locations.id', 'locations.location', 'areas.area', 'plants.plant')
+		            ->orderBy('plants.plant', 'desc')
+		            ->get();
+
+		$msgs = 'Successfully canceled';
+		return view('Mechanics.transfer_machine', compact('msgs','locations'));	
+	}
+
+// BORROW MACHINE (GIVE & RETURN)
+
+	public function borrow_machine() {
+		// dd('cao');
+
+		$borrow = DB::connection('sqlsrv')->select(DB::raw("SELECT COUNT(id) as c FROM machines WHERE machine_status = 'BORROWED' "));
+		$borrow = $borrow[0]->c;
+		return view('Mechanics.borrow_machine', compact('borrow'));	
+	}
+
+// GIVE MACHINE
+
+	public function give_machine() {
+		//
+		$session = Session::getId();
+
+		$external_locations = DB::connection('sqlsrv')->select(DB::raw("SELECT l.location,
+			   (SELECT COUNT(id) FROM [mechanics].[dbo].[machines] WHERE l.location = location) as qty,
+			   l.id,
+			   a.area,
+			   p.plant
+		  FROM [mechanics].[dbo].[locations] as l
+		  JOIN [mechanics].[dbo].[areas] as a ON a.id = l.area_id
+		  JOIN [mechanics].[dbo].[plants] as p ON p.id = a.plant_id
+		  LEFT JOIN [mechanics].[dbo].[machines] as m ON m.location = l.location
+
+		WHERE p.plant = 'EXTERNAL'
+		GROUP BY l.location, l.id, a.area, p.plant"));
+		// dd($external_locations);
+
+
+		return view('Mechanics.give_machine', compact('session','external_locations'));
+	}
+
+
+	public function give_machine_to(Request $request) {
+		//
+		$this->validate($request, ['give_machine_to' => 'required']);
+		$input = $request->all();
+		// dd($input);
+
+		$give_machine_to = strtoupper($input['give_machine_to']);
+		$session = $input['session'];
+
+		$machines = DB::table('machines')
+			            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+			            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+			            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+			            ->where('locations.location', '!=', $give_machine_to)
+			            ->select('machines.id', 'machines.os', 'machines.location', 'machines.brand', 'machines.type', 'machines.code', 'plants.plant')
+			            ->get();
+		
+		return view('Mechanics.give_machine_scan', compact('data','give_machine_to','session','machines','msg'));
+	}
+
+	public function give_machine_scan(Request $request) {
+		//
+		$input = $request->all(); 
+		// dd($input);
+		
+		$give_machine_to = strtoupper($input['give_machine_to']);
+		$session = $input['session'];
+		if ($input['give_doc'] != "") {
+			$give_doc = $input['give_doc'];	
+		} else {
+			$machines = DB::table('machines')
+			            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+			            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+			            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+			            ->where('locations.location', '!=', $give_machine_to)
+			            ->select('machines.id', 'machines.os', 'machines.location', 'machines.brand', 'machines.type', 'machines.code', 'plants.plant')
+			            ->get();
+
+			$data = DB::table('temp_give_machines')->where('ses', '=', $session)->get();
+			$msge = 'Please insert first document number (otpremnica)';
+			return view('Mechanics.give_machine_scan', compact('data','give_machine_to','give_doc','session','machines','msge'));
+		}
+		
+		// dd($machine_temp);
+
+		$machines = DB::table('machines')
+			            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+			            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+			            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+			            ->where('locations.location', '!=', $give_machine_to)
+			            ->select('machines.id', 'machines.os', 'machines.location', 'machines.brand', 'machines.type', 'machines.code', 'plants.plant')
+			            ->get();
+		$data = DB::table('temp_give_machines')->where('ses', '=', $session)->get();
+
+		if (!empty($input['machine_temp1'])) {
+			$machine_temp = strtoupper($input['machine_temp1']);
+
+		} elseif (!empty($input['machine_temp2'])) {
+			$machine_temp = strtoupper($input['machine_temp2']);
+		} else {
+			$msge = 'Please scan or select machine';
+			$machines = DB::table('machines')
+			            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+			            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+			            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+			            ->where('locations.location', '!=', $give_machine_to)
+			            ->select('machines.id', 'machines.os', 'machines.location', 'machines.brand', 'machines.type', 'machines.code', 'plants.plant')
+			            ->get();
+			$data = DB::table('temp_give_machines')->where('ses', '=', $session)->get();      
+			return view('Mechanics.give_machine_scan', compact('data','give_machine_to','give_doc','session','machines','msge'));
+		}
+
+		if (isset($machine_temp)) {
+			
+			if (strlen($machine_temp) == 7 OR strlen($machine_temp) == 8) {
+				// dd($machine_temp);
+
+				$exist = DB::table('machines')
+	            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+	            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+	            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+	            ->where('machines.os', '=', $machine_temp)
+	            ->select('machines.id', 'machines.os', 'machines.location', 'machines.brand', 'machines.type', 'machines.code', 'plants.plant')
+	            ->get();
+	            // dd($exist);
+				
+				if (isset($exist[0]->id)) {
+
+					$data_temp = DB::connection('sqlsrv')->select(DB::raw("SELECT os, ses FROM temp_give_machines WHERE os = '".$exist[0]->os."' AND ses = '".$session."' "));
+					if (isset($data_temp[0]->os)) {
+						
+						$data = DB::table('temp_give_machines')->where('ses', '=', $session)->get();
+						$msge = 'Machine already scaned';
+						return view('Mechanics.give_machine_scan', compact('data','give_machine_to','give_doc','session','machines','msge'));
+					}
+
+				} else {
+					
+					$data = DB::table('temp_give_machines')->where('ses', '=', $session)->get();
+					$msge = 'Machine does not exist in table';
+					return view('Mechanics.give_machine_scan', compact('data','give_machine_to','give_doc','session','machines','msge'));
+				}
+			} else {
+				
+				$data = DB::table('temp_give_machines')->where('ses', '=', $session)->get();
+				$msge = 'Machine barcode must have 7 or 8 characters';
+				return view('Mechanics.give_machine_scan', compact('data','give_machine_to','give_doc','session','machines','msge'));
+			}
+		} else {
+			dd('Error, zovi IT.');
+		}
+		// dd($machine_temp);
+
+		$table = temp_give_machine::firstOrNew(['os' => strtoupper($machine_temp)]);
+		$table->os_id =  $exist[0]->id;
+		$table->os =  strtoupper($machine_temp);
+		$table->brand =  $exist[0]->brand;
+		$table->type =  $exist[0]->type;
+		$table->code =  $exist[0]->code;
+		$table->give_machine_to =  strtoupper($give_machine_to);
+		$table->give_doc =  $give_doc;
+		$table->ses =  Session::getId();
+		$table->save();
+
+		$data = DB::table('temp_give_machines')->where('ses', '=', $session)->get();
+		$msg = 'Machine '.$machine_temp.' added to the list';
+		return view('Mechanics.give_machine_scan', compact('data','give_machine_to','give_doc','session','machines','msg'));
+
+	}
+
+	public function give_machine_remove($id, $session) {
+
+		$ses = $session;
+		$ses_data = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM temp_give_machines WHERE ses = '".$ses."' order by id desc"));
+		$give_machine_to = strtoupper($ses_data[0]->give_machine_to);
+		$give_doc = $ses_data[0]->give_doc;
+		
+		$machines = DB::table('machines')
+			            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+			            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+			            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+			            ->where('locations.location', '!=', $give_machine_to)
+			            ->select('machines.id', 'machines.os', 'machines.location', 'machines.brand', 'machines.type', 'machines.code', 'plants.plant')
+			            ->get();
+		$machine_to_remove = DB::table('temp_give_machines')
+			            ->where('temp_give_machines.id', '=', $id)
+			            ->select('temp_give_machines.id', 'temp_give_machines.os')
+			            ->get();
+	    // dd($machine_to_remove);
+
+		DB::connection('sqlsrv')->delete(DB::raw("DELETE FROM temp_give_machines WHERE ses = '".$ses."' AND id = '".$id."' "));
+		
+		$data = DB::table('temp_give_machines')->where('ses', '=', $session)->get();
+		$msg = 'Machine '.$machine_to_remove[0]->os.' removed from the list';
+		return view('Mechanics.give_machine_scan', compact('data','give_machine_to','give_doc','session','machines','msg'));
+	}
+
+	public function give_machine_confirm($session) {
+		//
+		$session;
+		$ses_data = DB::table('temp_give_machines')->where('ses', '=', $session)->get();
+		// dd($ses_data);
+	
+		if (!isset($ses_data[0]->id)) {
+
+			$msge = 'List was empty, first choose give to (plant)?';
+			return view('Mechanics.give_machine', compact('msge','session'));
+		}
+
+		$give_machine_to = strtoupper($ses_data[0]->give_machine_to);
+		$give_doc = $ses_data[0]->give_doc;
+		$new_location = $give_machine_to;
+		// $new_location_id = NULL;
+		$new_location_id = DB::table('locations')
+			            ->where('locations.location', '=', $give_machine_to)
+			            ->select('locations.id')
+			            ->get();
+	    // dd($new_location_id[0]->id);
+	    $new_location_id = $new_location_id[0]->id;
+
+		for ($i=0; $i < count($ses_data); $i++) {
+			
+			$os_id = $ses_data[$i]->os_id;
+			$os = $ses_data[$i]->os;
+			$brand = $ses_data[$i]->brand;
+			$type = $ses_data[$i]->type;
+			$code = $ses_data[$i]->code;
+			
+			// try {
+				$table = machines::where(['os' => $os])->update(['location' => $new_location, 'location_id' => $new_location_id, 'machine_status' => 'BORROWED', 'give_doc'=> $give_doc]);
+				
+				/* write to log */
+				$table = new borrow_machine_log;
+				$table->os_id = $os_id;
+				$table->os = $os;
+				$table->brand = $brand;
+				$table->type = $type;
+				$table->code = $code;
+				$table->function = 'GIVE';
+				$table->destination = $new_location;
+				$table->doc = $give_doc;
+				$table->save();
+
+				/* turn on and off in inteos */
+				/* no need */
+			// } catch(\Illuminate\Database\QueryException $ex){
+			// 	dd('problem to save');
+			// }
+			
+		}
+		DB::connection('sqlsrv')->delete(DB::raw("DELETE FROM temp_give_machines WHERE ses = '".$session."' "));
+
+		$msgs = 'Successfully saved';
+		$external_locations = DB::connection('sqlsrv')->select(DB::raw("SELECT l.location,
+			   (SELECT COUNT(id) FROM [mechanics].[dbo].[machines] WHERE l.location = location) as qty,
+			   l.id,
+			   a.area,
+			   p.plant
+		  FROM [mechanics].[dbo].[locations] as l
+		  JOIN [mechanics].[dbo].[areas] as a ON a.id = l.area_id
+		  JOIN [mechanics].[dbo].[plants] as p ON p.id = a.plant_id
+		  LEFT JOIN [mechanics].[dbo].[machines] as m ON m.location = l.location
+
+		WHERE p.plant = 'EXTERNAL'
+		GROUP BY l.location, l.id, a.area, p.plant"));
+		return view('Mechanics.give_machine', compact('msgs','session','external_locations'));
+	}
+
+	public function give_machine_cancel($session) {
+		//
+		$session;
+		$ses_data = DB::table('temp_give_machines')->where('ses', '=', $session)->get();
+		// dd($ses_data);
+
+		DB::connection('sqlsrv')->delete(DB::raw("DELETE FROM temp_give_machines WHERE ses = '".$session."' "));
+
+		$external_locations = DB::connection('sqlsrv')->select(DB::raw("SELECT l.location,
+			   (SELECT COUNT(id) FROM [mechanics].[dbo].[machines] WHERE l.location = location) as qty,
+			   l.id,
+			   a.area,
+			   p.plant
+		  FROM [mechanics].[dbo].[locations] as l
+		  JOIN [mechanics].[dbo].[areas] as a ON a.id = l.area_id
+		  JOIN [mechanics].[dbo].[plants] as p ON p.id = a.plant_id
+		  LEFT JOIN [mechanics].[dbo].[machines] as m ON m.location = l.location
+
+		WHERE p.plant = 'EXTERNAL'
+		GROUP BY l.location, l.id, a.area, p.plant"));
+
+		$msgs = 'Successfully canceled';
+		return view('Mechanics.give_machine', compact('msgs','session','external_locations'));
+	}
+
+// RETURN
+
+	public function return_machine() {
+		//
+		$session = Session::getId();
+		
+		$external_locations = DB::connection('sqlsrv')->select(DB::raw("SELECT l.location,
+			   (SELECT COUNT(id) FROM [mechanics].[dbo].[machines] WHERE l.location = location) as qty,
+			   l.id,
+			   a.area,
+			   p.plant
+		  FROM [mechanics].[dbo].[locations] as l
+		  JOIN [mechanics].[dbo].[areas] as a ON a.id = l.area_id
+		  JOIN [mechanics].[dbo].[plants] as p ON p.id = a.plant_id
+		  LEFT JOIN [mechanics].[dbo].[machines] as m ON m.location = l.location
+
+		WHERE p.plant = 'EXTERNAL'
+		GROUP BY l.location, l.id, a.area, p.plant"));
+
+		return view('Mechanics.return_machine', compact('session','external_locations'));
+	}
+
+
+	public function return_machine_to(Request $request) {
+		//
+		$this->validate($request, ['return_machine_to' => 'required']);
+		$input = $request->all();
+		// dd($input);
+
+		$return_machine_to = strtoupper($input['return_machine_to']);
+		$session = $input['session'];
+
+		$machines = DB::table('machines')
+			            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+			            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+			            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+			            ->where('locations.location', '=', $return_machine_to)
+			            ->select('machines.id', 'machines.os', 'machines.location', 'machines.brand', 'machines.type', 'machines.code', 'plants.plant')
+			            ->get();
+		
+		return view('Mechanics.return_machine_scan', compact('data','return_machine_to','session','machines','msg'));
+	}
+
+	public function return_machine_scan(Request $request) {
+		//
+		$input = $request->all(); 
+		// dd($input);
+		
+		$return_machine_to = strtoupper($input['return_machine_to']);
+		$session = $input['session'];
+		if ($input['return_doc'] != "") {
+			$return_doc = $input['return_doc'];	
+		} else {
+			$machines = DB::table('machines')
+			            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+			            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+			            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+			            ->where('locations.location', '=', $return_machine_to)
+			            ->select('machines.id', 'machines.os', 'machines.location', 'machines.brand', 'machines.type', 'machines.code', 'plants.plant')
+			            ->get();
+			$data = DB::table('temp_return_machines')->where('ses', '=', $session)->get();
+			$msge = 'Please insert first document number (otpremnica)';
+			return view('Mechanics.return_machine_scan', compact('data','return_machine_to','return_doc','session','machines','msge'));
+
+		}
+
+		// dd($machine_temp);
+
+		$machines = DB::table('machines')
+			            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+			            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+			            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+			            ->where('locations.location', '=', $return_machine_to)
+			            ->select('machines.id', 'machines.os', 'machines.location', 'machines.brand', 'machines.type', 'machines.code', 'plants.plant')
+			            ->get();
+			            
+		$data = DB::table('temp_return_machines')->where('ses', '=', $session)->get();
+
+		if (!empty($input['machine_temp1'])) {
+			$machine_temp = strtoupper($input['machine_temp1']);
+
+		} elseif (!empty($input['machine_temp2'])) {
+			$machine_temp = strtoupper($input['machine_temp2']);
+		} else {
+			$msge = 'Please scan or select machine';
+			$machines = DB::table('machines')
+			            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+			            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+			            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+			            ->where('locations.location', '=', $return_machine_to)
+			            ->select('machines.id', 'machines.os', 'machines.location', 'machines.brand', 'machines.type', 'machines.code', 'plants.plant')
+			            ->get();
+			$data = DB::table('temp_return_machines')->where('ses', '=', $session)->get();      
+			return view('Mechanics.return_machine_scan', compact('data','return_machine_to','return_doc','session','machines','msge'));
+		}
+
+		if (isset($machine_temp)) {
+			$machine_temp = strtoupper($machine_temp);
+			
+			if (strlen($machine_temp) == 7 OR strlen($machine_temp) == 8) {
+				// dd($machine_temp);
+
+				$exist = DB::table('machines')
+	            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+	            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+	            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+	            ->where('machines.os', '=', $machine_temp)
+	            ->where('machines.location', '=' , $return_machine_to)
+	            ->select('machines.id', 'machines.os', 'machines.location','machines.brand', 'machines.type', 'machines.code', 'plants.plant')
+	            ->get();
+				
+				if (isset($exist[0]->id)) {
+
+						$data_temp = DB::connection('sqlsrv')->select(DB::raw("SELECT os, ses FROM temp_return_machines WHERE os = '".$exist[0]->os."' AND ses = '".$session."' "));
+						if (isset($data_temp[0]->os)) {
+							
+							$data = DB::table('temp_return_machines')->where('ses', '=', $session)->get();
+							$msge = 'Machine already scaned';
+							return view('Mechanics.return_machine_scan', compact('data','return_machine_to','return_doc','session','machines','msge'));
+						}
+
+				} else {
+					
+					$data = DB::table('temp_return_machines')->where('ses', '=', $session)->get();
+					$msge = 'Machine '.$machine_temp.' does not exist on location '.$return_machine_to.' ';
+					return view('Mechanics.return_machine_scan', compact('data','return_machine_to','return_doc','session','machines','msge'));
+				}
+			} else {
+				
+				$data = DB::table('temp_return_machines')->where('ses', '=', $session)->get();
+				$msge = 'Machine barcode must have 7 or 8 characters';
+				return view('Mechanics.return_machine_scan', compact('data','return_machine_to','return_doc','session','machines','msge'));
+			}
+		} else {
+			dd('Error, zovi IT.');
+		}
+		// dd($machine_temp);
+
+		$table = temp_return_machine::firstOrNew(['os' => strtoupper($machine_temp)]);
+		$table->os_id =  $exist[0]->id;
+		$table->os =  strtoupper($machine_temp);
+		$table->brand =  $exist[0]->brand;
+		$table->type =  $exist[0]->type;
+		$table->code =  $exist[0]->code;
+		$table->return_machine_to =  strtoupper($return_machine_to);
+		$table->return_doc =  $return_doc;
+		$table->ses =  Session::getId();
+		$table->save();
+
+		$data = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM temp_return_machines WHERE ses = '".$session."' order by id desc"));
+		$msg = 'Machine added to the list';
+		return view('Mechanics.return_machine_scan', compact('data','return_machine_to','return_doc','session','machines','msg'));
+
+	}
+
+	public function return_machine_remove($id, $session) {
+
+		$ses = $session;
+		$ses_data = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM temp_return_machines WHERE ses = '".$ses."' order by id desc"));
+		$return_machine_to = strtoupper($ses_data[0]->return_machine_to);
+		$return_doc = $ses_data[0]->return_doc;
+		
+		$machines = DB::table('machines')
+			            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+			            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+			            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+			            ->where('locations.location', '=', $return_machine_to)
+			            ->select('machines.id', 'machines.os', 'machines.location', 'machines.brand', 'machines.type', 'machines.code', 'plants.plant')
+			            ->get();
+		$machine_to_remove = DB::table('temp_return_machines')
+			            ->where('temp_return_machines.id', '=', $id)
+			            ->select('temp_return_machines.id', 'temp_return_machines.os')
+			            ->get();
+
+		DB::connection('sqlsrv')->delete(DB::raw("DELETE FROM temp_return_machines WHERE ses = '".$ses."' AND id = '".$id."' "));
+		
+		// $data = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM temp_return_machines WHERE ses = '".$ses."' order by id desc"));
+		$data = DB::table('temp_return_machines')->where('ses', '=', $session)->get();
+		$msg = 'Machine '.$machine_to_remove[0]->os.' removed from the list';
+		return view('Mechanics.return_machine_scan', compact('data','return_machine_to','return_doc','session','machines','msg'));
+	}
+
+	public function return_machine_confirm($session) {
+		//
+		$session;
+		$ses_data = DB::table('temp_return_machines')->where('ses', '=', $session)->get();
+		// dd($ses_data);
+	
+		if (!isset($ses_data[0]->id)) {
+
+			$msge = 'List was empty, first choose return from (plant)?';
+			return view('Mechanics.return_machine', compact('msge', 'session'));
+		}
+
+		$return_machine_to = strtoupper($ses_data[0]->return_machine_to);
+		$return_doc = $ses_data[0]->return_doc;
+		// $new_location = $return_machine_to;
+		// $new_location_id = NULL;
+		$new_location = 'RECEIVING_SU';
+		$new_location_id = DB::table('locations')
+			            ->where('locations.location', '=', $new_location)
+			            ->select('locations.id')
+			            ->get();
+		// dd($new_location_id);
+		$new_location_id = $new_location_id[0]->id;
+		
+		for ($i=0; $i < count($ses_data); $i++) {
+			
+			$os_id = $ses_data[$i]->os_id;
+			$os = $ses_data[$i]->os;
+			$brand = $ses_data[$i]->brand;
+			$type = $ses_data[$i]->type;
+			$code = $ses_data[$i]->code;
+			// $source = $ses_data[$i]->return_machine_to;
+			
+			// try {
+
+				$table = machines::where(['os' => $os])->update(['location' => $new_location, 'location_id' => $new_location_id, 'machine_status' => 'STOCK', 'give_doc'=> '' ]);
+				
+				/* write to log */
+
+				$table = new borrow_machine_log;
+				$table->os_id = $os_id;
+				$table->os = $os;
+				$table->brand = $brand;
+				$table->type = $type;
+				$table->code = $code;
+				$table->function = 'RETURN';
+				$table->destination = $new_location;
+				// $table->source = $source;
+				$table->doc = $return_doc;
+				$table->save();
+
+				/* turn on and off in inteos */
+
+			// } catch(\Illuminate\Database\QueryException $ex){
+			// 	dd('problem to save');
+			// }
+
+		}
+		DB::connection('sqlsrv')->delete(DB::raw("DELETE FROM temp_return_machines WHERE ses = '".$session."' "));
+		
+		$msgs = 'Successfully saved and returned to location RECEIVING_SU';
+		$external_locations = DB::connection('sqlsrv')->select(DB::raw("SELECT l.location,
+			   (SELECT COUNT(id) FROM [mechanics].[dbo].[machines] WHERE l.location = location) as qty,
+			   l.id,
+			   a.area,
+			   p.plant
+		  FROM [mechanics].[dbo].[locations] as l
+		  JOIN [mechanics].[dbo].[areas] as a ON a.id = l.area_id
+		  JOIN [mechanics].[dbo].[plants] as p ON p.id = a.plant_id
+		  LEFT JOIN [mechanics].[dbo].[machines] as m ON m.location = l.location
+
+		WHERE p.plant = 'EXTERNAL'
+		GROUP BY l.location, l.id, a.area, p.plant"));
+		return view('Mechanics.return_machine', compact('msgs','session','external_locations'));
+	}
+
+	public function return_machine_cancel($session) {
+		//
+		$session;
+		$ses_data = DB::table('temp_return_machines')->where('ses', '=', $session)->get();
+		// dd($ses_data);
+
+		DB::connection('sqlsrv')->delete(DB::raw("DELETE FROM temp_return_machines WHERE ses = '".$session."' "));
+
+		$external_locations = DB::connection('sqlsrv')->select(DB::raw("SELECT l.location,
+			   (SELECT COUNT(id) FROM [mechanics].[dbo].[machines] WHERE l.location = location) as qty,
+			   l.id,
+			   a.area,
+			   p.plant
+		  FROM [mechanics].[dbo].[locations] as l
+		  JOIN [mechanics].[dbo].[areas] as a ON a.id = l.area_id
+		  JOIN [mechanics].[dbo].[plants] as p ON p.id = a.plant_id
+		  LEFT JOIN [mechanics].[dbo].[machines] as m ON m.location = l.location
+
+		WHERE p.plant = 'EXTERNAL'
+		GROUP BY l.location, l.id, a.area, p.plant"));
+
+		$msgs = 'Successfully canceled';
+		return view('Mechanics.return_machine', compact('msgs','session','external_locations'));
+	}
+
+// REPAIR MACHINE (ADJUST & FIX)
+
+	public function repair_machine() {
+		// dd('cao');
+		
+		$on_repair = DB::connection('sqlsrv')->select(DB::raw("SELECT COUNT(id) as c FROM machines WHERE machine_status = 'TO_REPAIR' "));
+		$on_repair = $on_repair[0]->c;
+		// dd($on_repair);
+
+		return view('Mechanics.repair_machine', compact('on_repair'));	
+	}
+
+// ADJUST MACHINE
+
+	public function adjust_machine() {
+		//
+		$session = Session::getId();
+		return view('Mechanics.adjust_machine', compact('session'));
+	}
+
+
+	public function adjust_machine_to(Request $request) {
+		//
+		$this->validate($request, ['adjust_machine_to' => 'required']);
+		$input = $request->all();
+		// dd($input);
+
+		$adjust_machine_to = strtoupper($input['adjust_machine_to']);
+		$session = $input['session'];
+		
+		$machines = DB::table('machines')
+			            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+			            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+			            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+			            // ->where('plants.plant', '=', $adjust_machine_to)
+			            ->where('machines.machine_status', '!=', 'TO_REPAIR')
+			            ->select('machines.id', 'machines.os', 'machines.location', 'machines.brand', 'machines.type', 'machines.code', 'plants.plant')
+			            ->get();
+
+		return view('Mechanics.adjust_machine_scan', compact('data','adjust_machine_to','session','machines','msg'));
+	}
+
+	public function adjust_machine_scan(Request $request) {
+		//
+		$input = $request->all(); 
+		// $session = Session::getId();
+		
+		$adjust_machine_to = strtoupper($input['adjust_machine_to']);
+		$session = $input['session'];
+		// dd($input);
+
+		$machines = DB::table('machines')
+			            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+			            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+			            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+			            ->where('plants.plant', '=', $adjust_machine_to)
+			            ->where('machines.machine_status', '!=', 'TO_REPAIR')
+			            ->select('machines.id', 'machines.os', 'machines.location', 'machines.brand', 'machines.type', 'machines.code', 'plants.plant')
+			            ->get();
+
+		$data = DB::table('temp_adjust_machines')->where('ses', '=', $session)->get();
+
+		if (!empty($input['machine_temp1'])) {
+			$machine_temp = strtoupper($input['machine_temp1']);
+
+		} elseif (!empty($input['machine_temp2'])) {
+			$machine_temp = strtoupper($input['machine_temp2']);
+		} else {
+			$msge = 'Please scan or select machine';
+			$machines = DB::table('machines')
+			            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+			            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+			            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+			            ->where('plants.plant', '=', $adjust_machine_to)
+			            ->where('machines.machine_status', '!=', 'TO_REPAIR')
+			            ->select('machines.id', 'machines.os', 'machines.location', 'machines.brand', 'machines.type', 'machines.code', 'plants.plant')
+			            ->get();
+			$data = DB::table('temp_adjust_machines')->where('ses', '=', $session)->get();      
+			return view('Mechanics.adjust_machine_scan', compact('data','adjust_machine_to','session','machines','msge'));
+		}
+
+		if (isset($machine_temp)) {
+			
+			if (strlen($machine_temp) == 7 OR strlen($machine_temp) == 8) {
+				// dd($machine_temp);
+
+				$exist = DB::table('machines')
+	            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+	            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+	            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+	            ->where('machines.os', '=', $machine_temp)
+	            ->where('machines.machine_status', '!=', 'TO_REPAIR')
+	            ->select('machines.id', 'machines.os', 'machines.location', 'machines.brand', 'machines.type', 'machines.code', 'plants.plant')
+	            ->get();
+		        // dd($exist);
+				
+				if (isset($exist[0]->id)) {
+
+					if ($adjust_machine_to == $exist[0]->plant)  {
+
+						$data_temp = DB::connection('sqlsrv')->select(DB::raw("SELECT os, ses FROM temp_adjust_machines WHERE os = '".$exist[0]->os."' AND ses = '".$session."' "));
+						if (isset($data_temp[0]->os)) {
+						
+							$data = DB::table('temp_adjust_machines')->where('ses', '=', $session)->get();
+							$msge = 'Machine already scaned';
+							return view('Mechanics.adjust_machine_scan', compact('data','adjust_machine_to','session','machines','msge'));
+						}
+					} else {
+						
+						$data = DB::table('temp_adjust_machines')->where('ses', '=', $session)->get();
+						if ($exist[0]->plant == NULL) {
+							$exist[0]->plant = 'NOT DEFINED';
+						}
+						$msge = 'Machine is in '.$exist[0]->plant.' plant but choosen plant to repair is '.$adjust_machine_to. ' ! ';
+						return view('Mechanics.adjust_machine_scan', compact('data','adjust_machine_to','session','machines','msge'));
+					}
+				} else {
+					
+					$data = DB::table('temp_adjust_machines')->where('ses', '=', $session)->get();
+					$msge = 'Machine does not exist in table or machine have status TO_REPAIR';
+					return view('Mechanics.adjust_machine_scan', compact('data','adjust_machine_to','session','machines','msge'));
+				}
+			} else {
+				
+				$data = DB::table('temp_adjust_machines')->where('ses', '=', $session)->get();
+				$msge = 'Machine barcode must have 7 or 8 characters';
+				return view('Mechanics.adjust_machine_scan', compact('data','adjust_machine_to','session','machines','msge'));
+			}
+		} else {
+			dd('Error, zovi IT.');
+		}
+		// dd($machine_temp);
+
+		$table = temp_adjust_machine::firstOrNew(['os' => strtoupper($machine_temp)]);
+		$table->os_id =  $exist[0]->id;
+		$table->os =  strtoupper($machine_temp);
+		$table->brand = $exist[0]->brand;
+		$table->type =  $exist[0]->type;
+		$table->code =  $exist[0]->code;
+		$table->adjust_machine_to =  strtoupper($adjust_machine_to);
+		$table->ses =  Session::getId();
+		$table->save();
+
+		$data = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM temp_adjust_machines WHERE ses = '".$session."' order by id desc"));
+		$msg = 'Machine added '.$machine_temp.' to the list';
+		return view('Mechanics.adjust_machine_scan', compact('data','adjust_machine_to','session','machines','msg'));
+
+	}
+
+	public function adjust_machine_remove($id, $session) {
+
+		$ses = $session;
+		$ses_data = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM temp_adjust_machines WHERE ses = '".$ses."' order by id desc"));
+		$adjust_machine_to = strtoupper($ses_data[0]->adjust_machine_to);
+		
+		$machines = DB::table('machines')
+			            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+			            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+			            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+			            ->where('plants.plant', '=', $adjust_machine_to)
+			            ->where('machines.machine_status', '!=', 'TO_REPAIR')
+			            ->select('machines.id', 'machines.os', 'machines.location', 'machines.brand', 'machines.type', 'machines.code', 'plants.plant')
+			            ->get();
+		$machine_to_remove = DB::table('temp_adjust_machines')
+			            ->where('temp_adjust_machines.id', '=', $id)
+			            ->select('temp_adjust_machines.id', 'temp_adjust_machines.os')
+			            ->get();
+
+		DB::connection('sqlsrv')->delete(DB::raw("DELETE FROM temp_adjust_machines WHERE ses = '".$ses."' AND id = '".$id."' "));
+		
+		// $data = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM temp_adjust_machines WHERE ses = '".$ses."' order by id desc"));
+		$data = DB::table('temp_adjust_machines')->where('ses', '=', $session)->get();
+		$msg = 'Machine '.$machine_to_remove[0]->os.' removed from the list';
+		return view('Mechanics.adjust_machine_scan', compact('data','adjust_machine_to','session','machines','msg'));
+	}
+
+	public function adjust_machine_confirm($session) {
+		//
+		$session;
+		$ses_data = DB::table('temp_adjust_machines')->where('ses', '=', $session)->get();
+
+		if (!isset($ses_data[0]->id)) {
+
+			$msge = 'List was empty, first choose adjust to (plant)?';
+			return view('Mechanics.adjust_machine', compact('msge','session'));
+		}
+
+		$adjust_machine_to = strtoupper($ses_data[0]->adjust_machine_to);
+		// $new_location = $adjust_machine_to;
+		// $new_location_id = NULL;
+		
+		$exist_in_plant = DB::table('machines')
+		            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+		            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+		            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+		            ->where('machines.os', '=', $ses_data[0]->os)
+		            ->select('machines.id', 'machines.os', 'machines.location', 'plants.plant')
+		            ->get();
+		
+		if ($adjust_machine_to == 'SUBOTICA')  {
+
+			$new_location = 'REPAIRING_SU';
+			$new_location_id = DB::table('locations')
+			            ->where('locations.location', '=', $new_location)
+			            ->select('locations.id')
+			            ->get();
+	    	// dd($new_location_id[0]->id);
+	    	$new_location_id = $new_location_id[0]->id;
+
+		} elseif ($adjust_machine_to == 'KIKINDA') {
+
+			$new_location = 'REPAIRING_KI';
+			$new_location_id = DB::table('locations')
+			            ->where('locations.location', '=', $new_location)
+			            ->select('locations.id')
+			            ->get();
+	    	// dd($new_location_id[0]->id);
+	    	$new_location_id = $new_location_id[0]->id;
+
+		} elseif ($adjust_machine_to == 'SENTA') {
+
+			$new_location = 'REPAIRING_SE';
+			$new_location_id = DB::table('locations')
+			            ->where('locations.location', '=', $new_location)
+			            ->select('locations.id')
+			            ->get();
+	    	// dd($new_location_id[0]->id);
+	    	$new_location_id = $new_location_id[0]->id;
+
+		} else {
+			dd('call IT');
+		}
+
+		for ($i=0; $i < count($ses_data); $i++) {
+			
+			$os = $ses_data[$i]->os;
+			// dd($os);
+			// try {
+
+				// $table = machines::where(['os' => $os])->update(['location' => $new_location, 'location_id' => $new_location_id, 'machine_status' => 'TO_REPAIR']);
+				$table = machines::where(['os' => $os])->update(['machine_status' => 'TO_REPAIR']);
+				
+
+			// } catch(\Illuminate\Database\QueryException $ex){
+			// 	dd('problem to save');
+			// }
+		}
+		DB::connection('sqlsrv')->delete(DB::raw("DELETE FROM temp_adjust_machines WHERE ses = '".$session."' "));
+		
+		$msgs = 'Successfully saved';
+		return view('Mechanics.adjust_machine', compact('msgs','session'));
+	}
+
+	public function adjust_machine_cancel($session) {
+		//
+		$session;
+		$ses_data = DB::table('temp_adjust_machines')->where('ses', '=', $session)->get();
+		// dd($ses_data);
+
+		DB::connection('sqlsrv')->delete(DB::raw("DELETE FROM temp_adjust_machines WHERE ses = '".$session."' "));
+
+		$msgs = 'Successfully canceled';
+		return view('Mechanics.adjust_machine', compact('msgs','session'));
+	}	
+
+// FIX MACHINE
+
+	public function fix_machine() {
+		//
+		$session = Session::getId();
+		return view('Mechanics.fix_machine', compact('session'));
+	}
+
+
+	public function fix_machine_to(Request $request) {
+		//
+		$this->validate($request, ['fix_machine_to' => 'required']);
+		$input = $request->all();
+		// dd($input);
+
+		$fix_machine_to = strtoupper($input['fix_machine_to']);
+		$session = $input['session'];
+
+		$machines = DB::table('machines')
+			            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+			            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+			            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+			            // ->where('locations.location', '=', $fix_machine_to)
+			            ->where('machines.machine_status', '=', 'TO_REPAIR')
+			            ->select('machines.id', 'machines.os', 'machines.location', 'machines.brand', 'machines.type', 'machines.code', 'plants.plant')
+			            ->get();
+		
+		return view('Mechanics.fix_machine_scan', compact('data','fix_machine_to','session','machines','msg'));
+	}
+
+	public function fix_machine_scan(Request $request) {
+		//
+		$input = $request->all(); 
+		// $session = Session::getId();
+		
+		$fix_machine_to = strtoupper($input['fix_machine_to']);
+		$session = $input['session'];
+		// dd($machine_temp);
+
+		$machines = DB::table('machines')
+			            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+			            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+			            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+			            // ->where('locations.location', '=', $fix_machine_to)
+			            ->where('machines.machine_status', '=', 'TO_REPAIR')
+			            ->select('machines.id', 'machines.os', 'machines.location', 'machines.brand', 'machines.type', 'machines.code', 'plants.plant')
+			            ->get();
+		$data = DB::table('temp_fix_machines')->where('ses', '=', $session)->get();
+
+		if (!empty($input['machine_temp1'])) {
+			$machine_temp = strtoupper($input['machine_temp1']);
+
+		} elseif (!empty($input['machine_temp2'])) {
+			$machine_temp = strtoupper($input['machine_temp2']);
+		} else {
+			$msge = 'Please scan or select machine';
+			$machines = DB::table('machines')
+			            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+			            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+			            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+			            // ->where('locations.location', '=', $fix_machine_to)
+			            ->where('machines.machine_status', '=', 'TO_REPAIR')
+			            ->select('machines.id', 'machines.os', 'machines.location', 'machines.brand', 'machines.type', 'machines.code', 'plants.plant')
+			            ->get();
+			$data = DB::table('temp_fix_machines')->where('ses', '=', $session)->get();      
+			return view('Mechanics.fix_machine_scan', compact('data','fix_machine_to','session','machines','msge'));
+		}
+
+		if (isset($machine_temp)) {
+			
+			if (strlen($machine_temp) == 7 OR strlen($machine_temp) == 8) {
+				// dd($machine_temp);
+
+				$exist = DB::table('machines')
+	            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+	            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+	            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+	            ->where('machines.os', '=', $machine_temp)
+	            // ->where('machines.location', '=' , $fix_machine_to)
+	            ->where('machines.machine_status', '=', 'TO_REPAIR')
+	            ->select('machines.id', 'machines.os', 'machines.location','machines.brand', 'machines.type', 'machines.code', 'plants.plant')
+	            ->get();
+	            // dd($exist);
+				
+				if (isset($exist[0]->id)) {
+
+					// if ($fix_machine_to == $exist[0]->location) {
+						$data_temp = DB::connection('sqlsrv')->select(DB::raw("SELECT os, ses FROM temp_fix_machines WHERE os = '".$exist[0]->os."' AND ses = '".$session."' "));
+						if (isset($data_temp[0]->os)) {
+							
+							$data = DB::table('temp_fix_machines')->where('ses', '=', $session)->get();
+							$msge = 'Machine already scaned';
+							return view('Mechanics.fix_machine_scan', compact('data','fix_machine_to','session','machines','msge'));
+						}
+					// } else {
+					
+					// 	$data = DB::table('temp_fix_machines')->where('ses', '=', $session)->get();
+					// 	$msge = 'Machine '.$machine_temp.' does not exist on location '.$fix_machine_to.' ';
+					// 	return view('Mechanics.fix_machine_scan', compact('data','fix_machine_to','session','machines','msge'));
+					// }
+
+				} else {
+				
+					$data = DB::table('temp_fix_machines')->where('ses', '=', $session)->get();
+					$msge = 'Machine '.$machine_temp.' does not exist on location '.$fix_machine_to.' ';
+					return view('Mechanics.fix_machine_scan', compact('data','fix_machine_to','session','machines','msge'));
+				}
+			} else {
+				
+				$data = DB::table('temp_fix_machines')->where('ses', '=', $session)->get();
+				$msge = 'Machine barcode must have 7 or 8 characters';
+				return view('Mechanics.fix_machine_scan', compact('data','fix_machine_to','session','machines','msge'));
+			}
+		} else {
+			dd('Error, zovi IT.');
+		}
+		// dd($machine_temp);
+
+		$table = temp_fix_machine::firstOrNew(['os' => strtoupper($machine_temp)]);
+		$table->os_id =  $exist[0]->id;
+		$table->os =  strtoupper($machine_temp);
+		$table->brand = $exist[0]->brand;
+		$table->type =  $exist[0]->type;
+		$table->code =  $exist[0]->code;
+		$table->fix_machine_to =  strtoupper($fix_machine_to);
+		$table->ses =  Session::getId();
+		$table->save();
+
+		$data = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM temp_fix_machines WHERE ses = '".$session."' order by id desc"));
+		$msg = 'Machine '.$machine_temp.' added to the list';
+		return view('Mechanics.fix_machine_scan', compact('data','fix_machine_to','session','machines','msg'));
+
+	}
+
+	public function fix_machine_remove($id, $session) {
+
+		$ses = $session;
+		$ses_data = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM temp_fix_machines WHERE ses = '".$ses."' order by id desc"));
+		$fix_machine_to = strtoupper($ses_data[0]->fix_machine_to);
+		
+		$machines = DB::table('machines')
+			            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+			            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+			            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+			            // ->where('locations.location', '=', $fix_machine_to)
+			            ->where('machines.machine_status', '=', 'TO_REPAIR')
+			            ->select('machines.id', 'machines.os', 'machines.location', 'machines.brand', 'machines.type', 'machines.code', 'plants.plant')
+			            ->get();
+		$machine_to_remove = DB::table('temp_fix_machines')
+			            ->where('temp_fix_machines.id', '=', $id)
+			            ->select('temp_fix_machines.id', 'temp_fix_machines.os')
+			            ->get();
+
+		DB::connection('sqlsrv')->delete(DB::raw("DELETE FROM temp_fix_machines WHERE ses = '".$ses."' AND id = '".$id."' "));
+		
+		// $data = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM temp_fix_machines WHERE ses = '".$ses."' order by id desc"));
+		$data = DB::table('temp_fix_machines')->where('ses', '=', $session)->get();
+		$msg = 'Machine '.$machine_to_remove[0]->os.' removed from the list';
+		return view('Mechanics.fix_machine_scan', compact('data','fix_machine_to','session','machines','msg'));
+	}
+
+	public function fix_machine_confirm($session) {
+		//
+		$session;
+		$ses_data = DB::table('temp_fix_machines')->where('ses', '=', $session)->get();
+		// dd($ses_data);
+
+		if (!isset($ses_data[0]->id)) {
+
+			$msge = 'List was empty, first choose fix from (plant)?';
+			return view('Mechanics.fix_machine', compact('msge', 'session'));
+		}
+
+		$fix_machine_to = strtoupper($ses_data[0]->fix_machine_to);
+		// dd($fix_machine_to);
+
+		if ($fix_machine_to == 'REPAIRING_SU') {
+
+			$new_locations = DB::table('locations')
+			            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+			            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+			            ->where('plants.plant', '=', 'SUBOTICA')
+			            ->where('areas.area', '=', 'STOCK_S')
+			            ->get();
+		    $plant = 'SUBOTICA';
+		    $area = 'STOCK_S';
+
+		} elseif (($fix_machine_to == 'REPAIRING_KI')) {
+
+			$new_locations = DB::table('locations')
+						->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+			            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+			            ->where('plants.plant', '=', 'KIKINDA')
+			            ->where('areas.area', '=', 'STOCK_K')
+			            ->get();
+  			$plant = 'KIKINDA';
+  			$area = 'STOCK_K';
+		    
+		} elseif (($fix_machine_to == 'REPAIRING_SE')) {
+
+			$new_locations = DB::table('locations')
+			            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+			            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+			            ->where('plants.plant', '=', 'SENTA')
+			            ->where('areas.area', '=', 'STOCK_Z')
+			            ->get();
+			$plant = 'SENTA';
+			$area = 'STOCK_Z';
+		    
+		} else {
+			dd('Plant not recognized');
+		}
+		// dd($new_locations);
+		return view('Mechanics.fix_machine_destination', compact('session','new_locations','plant','area'));
+	}
+
+	public function fix_machine_destination_post(Request $request) {
+		//
+		$input = $request->all(); 
+		// dd($input);
+		
+		$session = $input['session'];
+		$plant = $input['plant'];
+		$area = $input['area'];
+
+		$ses_data = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM temp_fix_machines WHERE ses = '".$session."' order by id desc"));
+
+		if (!empty($input['location1'])) {
+			$location = strtoupper($input['location1']);
+
+		} elseif (!empty($input['location2'])) {
+			$location = strtoupper($input['location2']);
+		} else {
+			
+			$new_locations = DB::table('locations')
+			            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+			            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+			            ->where('plants.plant', '=', $plant)
+			            ->where('areas.area', '=', $area)
+			            ->get();
+			$msge = 'Please scan or select location';
+			return view('Mechanics.fix_machine_destination', compact('session','new_locations','plant','area','msge'));
+		}
+
+		$new_location_id = DB::table('locations')
+			            ->where('location', '=', $location)
+			            ->get();
+		// dd($new_location_id[0]->id);
+
+		$new_location_id = $new_location_id[0]->id;
+
+		for ($i=0; $i < count($ses_data); $i++) {
+			
+			$os = $ses_data[$i]->os;
+			// dd($os);
+			// try {
+
+				$table = machines::where(['os' => $os])->update(['location' => $location, 'location_id' => $new_location_id, 'machine_status' => 'STOCK']);
+				
+
+			// } catch(\Illuminate\Database\QueryException $ex){
+			// 	dd('problem to save');
+			// }
+		}
+		DB::connection('sqlsrv')->delete(DB::raw("DELETE FROM temp_fix_machines WHERE ses = '".$session."' "));
+	
+		$msgs = 'Successfully saved';
+		return view('Mechanics.fix_machine', compact('msgs','session'));
+
+	}
+
+	public function fix_machine_cancel($session) {
+		//
+		$session;
+		$ses_data = DB::table('temp_fix_machines')->where('ses', '=', $session)->get();
+		// dd($ses_data);
+
+		DB::connection('sqlsrv')->delete(DB::raw("DELETE FROM temp_fix_machines WHERE ses = '".$session."' "));
+
+		$msgs = 'Successfully canceled';
+		return view('Mechanics.fix_machine', compact('msgs','session'));
+	}	
+
+// DISABLE MACHINE (WRITEOFF & SELL)
+
+	public function disable_machine() {
+
+		$writeoff = DB::connection('sqlsrv')->select(DB::raw("SELECT COUNT(id) as c FROM machines WHERE machine_status = 'WRITE_OFF' "));
+		$writeoff = $writeoff[0]->c;
+		$sold = DB::connection('sqlsrv')->select(DB::raw("SELECT COUNT(id) as c FROM machines WHERE machine_status = 'SOLD' "));
+		$sold = $sold[0]->c;
+
+		$session = Session::getId();
+
+		return view('Mechanics.disable_machine', compact('writeoff','sold','session'));	
+	}
+
+// WRITEOFF MACHINE
+
+	public function writeoff_machine_scan(Request $request) {
+		//
+		// dd('Cao');
+
+		$input = $request->all(); 
+		// dd($input);
+		
+		if (isset($input['reason'])) {
+			$reason = $input['reason'];
+		} else {
+			$reason = '';
+		}
+		
+		// if (isset($input['session'])) {
+		// 	$session = $input['session'];	
+		// } else {
+		// 	$session = NULL;
+		// }
+		$session = Session::getId();
+		// dd($session);
+		
+		// dd($machine_temp);
+		$machines = DB::table('machines')
+			            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+			            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+			            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+			            ->select('machines.id', 'machines.os', 'machines.location', 'machines.brand', 'machines.type', 'machines.code', 'plants.plant')
+			            ->get();
+		$data = DB::table('temp_writeoff_machines')->where('ses', '=', $session)->get();
+		// dd($data);
+
+		if (!empty($input['machine_temp1'])) {
+			$machine_temp = strtoupper($input['machine_temp1']);
+
+		} elseif (!empty($input['machine_temp2'])) {
+			$machine_temp = strtoupper($input['machine_temp2']);
+		} else {
+			$msge = 'Please scan or select machine';
+			$machines = DB::table('machines')
+			            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+			            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+			            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+			            ->select('machines.id', 'machines.os', 'machines.location', 'machines.brand', 'machines.type', 'machines.code', 'plants.plant')
+			            ->get();
+			$data = DB::table('temp_writeoff_machines')->where('ses', '=', $session)->get();      
+			return view('Mechanics.writeoff_machine_scan', compact('data','reason','session','machines','msge'));
+		}
+		// dd($machine_temp);
+
+		if (isset($machine_temp)) {
+			
+			if (strlen($machine_temp) == 7 OR strlen($machine_temp) == 8) {
+				// dd($machine_temp);
+
+				$exist = DB::table('machines')
+	            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+	            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+	            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+	            ->where('machines.os', '=', $machine_temp)
+	            ->select('machines.id', 'machines.os', 'machines.location', 'machines.brand', 'machines.type', 'machines.code', 'plants.plant')
+	            ->get();
+	            // dd($exist);
+				
+				if (isset($exist[0]->id)) {
+
+						$data_temp = DB::connection('sqlsrv')->select(DB::raw("SELECT os, ses FROM temp_writeoff_machines WHERE os = '".$exist[0]->os."' AND ses = '".$session."' "));
+						if (isset($data_temp[0]->os)) {
+							
+							$data = DB::table('temp_writeoff_machines')->where('ses', '=', $session)->get();
+							$msge = 'Machine already scaned';
+							return view('Mechanics.writeoff_machine_scan', compact('data','reason','session','machines','msge'));
+						}
+				} else {
+					
+					$data = DB::table('temp_writeoff_machines')->where('ses', '=', $session)->get();
+					$msge = 'Mmachine does not exist in table';
+					return view('Mechanics.writeoff_machine_scan', compact('data','reason','session','machines','msge'));
+				}
+			} else {
+				
+				$data = DB::table('temp_writeoff_machines')->where('ses', '=', $session)->get();
+				$msge = 'Machine barcode must have 7 or 8 characters';
+				return view('Mechanics.writeoff_machine_scan', compact('data','reason','session','machines','msge'));
+			}
+		} else {
+			dd('Error, zovi IT.');
+		}
+		// dd($machine_temp);
+
+		$table = temp_writeoff_machine::firstOrNew(['os' => strtoupper($machine_temp)]);
+		$table->os_id =  $exist[0]->id;
+		$table->os =  strtoupper($machine_temp);
+		$table->brand =  $exist[0]->brand;
+		$table->type =  $exist[0]->type;
+		$table->code =  $exist[0]->code;
+		$table->reason =  $reason;
+		$table->ses =  Session::getId();
+		$table->save();
+
+		$data = DB::table('temp_writeoff_machines')->where('ses', '=', $session)->get();
+		$msg = 'Machine '.$machine_temp.' added to the list';
+		return view('Mechanics.writeoff_machine_scan', compact('data','reason','session','machines','msg'));
+		
+	}
+
+	public function writeoff_machine_remove($id, $session) {
+
+		$ses = $session;
+		// dd($ses);
+		$ses_data = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM temp_writeoff_machines WHERE ses = '".$ses."' order by id desc"));
+		// dd($ses_data);
+		$reason = $ses_data[0]->reason;
+
+		$machines = DB::table('machines')
+			            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+			            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+			            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+			            ->select('machines.id', 'machines.os', 'machines.location', 'machines.brand', 'machines.type', 'machines.code', 'plants.plant')
+			            ->get();
+
+	    $machine_to_remove = DB::table('temp_writeoff_machines')
+			            ->where('temp_writeoff_machines.id', '=', $id)
+			            ->select('temp_writeoff_machines.id', 'temp_writeoff_machines.os')
+			            ->get();
+		// dd($machine_to_remove);
+
+		DB::connection('sqlsrv')->delete(DB::raw("DELETE FROM temp_writeoff_machines WHERE ses = '".$ses."' AND id = '".$id."' "));
+
+		$data = DB::table('temp_writeoff_machines')->where('ses', '=', $session)->get();
+		$msg = 'Machine '.$machine_to_remove[0]->os.' removed from the list';
+		return view('Mechanics.writeoff_machine_scan', compact('data','reason','session','machines','msg'));
+	}
+
+	public function writeoff_machine_confirm($session) {
+		//
+		$session;
+		$ses_data = DB::table('temp_writeoff_machines')->where('ses', '=', $session)->get();
+
+		if (!isset($ses_data[0]->id)) {
+
+			$msge = 'List was empty, first choose writeoff to (plant)?';
+			return view('Mechanics.writeoff_machine', compact('msge','session'));
+		}
+
+		$reason = $ses_data[0]->reason;
+		
+		for ($i=0; $i < count($ses_data); $i++) {
+			
+			$os = $ses_data[$i]->os;
+			
+			// try {
+
+				$table = machines::where(['os' => $os])->update(['machine_status' => 'WRITE_OFF', 'location' => 'WRITE_OFF', 'location_id' => NULL, 'write_off_reason' => $reason]);
+				
+			// } catch(\Illuminate\Database\QueryException $ex){
+			// 	dd('problem to save');
+			// }
+		}
+		DB::connection('sqlsrv')->delete(DB::raw("DELETE FROM temp_writeoff_machines WHERE ses = '".$session."' "));
+		
+		$msgs = 'Successfully saved';
+		// return view('Mechanics.writeoff_machine', compact('msgs','session'));
+		$writeoff = DB::connection('sqlsrv')->select(DB::raw("SELECT COUNT(id) as c FROM machines WHERE machine_status = 'WRITE_OFF' "));
+		$writeoff = $writeoff[0]->c;
+		$sold = DB::connection('sqlsrv')->select(DB::raw("SELECT COUNT(id) as c FROM machines WHERE machine_status = 'SOLD' "));
+		$sold = $sold[0]->c;
+
+		$session = Session::getId();
+
+		return view('Mechanics.disable_machine', compact('writeoff','sold','session','msgs'));
+	}
+
+	public function writeoff_machine_cancel($session) {
+		//
+		$session;
+		$ses_data = DB::table('temp_writeoff_machines')->where('ses', '=', $session)->get();
+		// dd($ses_data);
+
+		DB::connection('sqlsrv')->delete(DB::raw("DELETE FROM temp_writeoff_machines WHERE ses = '".$session."' "));
+
+		$msgs = 'Successfully canceled';
+		// return view('Mechanics.writeoff_machine', compact('msgs','session'));
+
+		$writeoff = DB::connection('sqlsrv')->select(DB::raw("SELECT COUNT(id) as c FROM machines WHERE machine_status = 'WRITE_OFF' "));
+		$writeoff = $writeoff[0]->c;
+		$sold = DB::connection('sqlsrv')->select(DB::raw("SELECT COUNT(id) as c FROM machines WHERE machine_status = 'SOLD' "));
+		$sold = $sold[0]->c;
+
+		$session = Session::getId();
+
+		return view('Mechanics.disable_machine', compact('writeoff','sold','session','msgs'));
+	}	
+
+// SELL MACHINE
+
+	public function sell_machine() {
+
+		// dd('cao');
+		return view('Mechanics.sell_machine');
+	}
+
+	public function sell_machine_to(Request $request) {
+		//
+		// dd('Cao');
+
+		$input = $request->all(); 
+		// dd($input);
+		
+		if ($input['buyer'] == '' OR $input['buyer'] == NULL) {
+			$msge = 'Unesite kupca';
+			return view('Mechanics.sell_machine', compact('msge'));	
+		
+		} else {
+			$buyer = $input['buyer'];
+		}
+		// dd($buyer);
+
+		$session = Session::getId();
+
+		$machines = DB::table('machines')
+			            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+			            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+			            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+			            ->select('machines.id', 'machines.os', 'machines.location', 'machines.brand', 'machines.type', 'machines.code', 'plants.plant')
+			            ->get();
+
+		return view('Mechanics.sell_machine_scan', compact('buyer','session','machines'));
+	}
+
+	public function sell_machine_scan(Request $request) {
+		//
+		// dd('Cao');
+
+		$input = $request->all(); 
+		// dd($input);
+		
+		if (isset($input['buyer'])) {
+			$buyer = $input['buyer'];
+		} else {
+			$buyer = '';
+		}
+		
+		$session = Session::getId();
+		// dd($session);
+		
+		// dd($machine_temp);
+		$machines = DB::table('machines')
+			            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+			            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+			            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+			            ->select('machines.id', 'machines.os', 'machines.location', 'machines.brand', 'machines.type', 'machines.code', 'plants.plant')
+			            ->get();
+		$data = DB::table('temp_sell_machines')->where('ses', '=', $session)->get();
+		// dd($data);
+
+		if (!empty($input['machine_temp1'])) {
+			$machine_temp = strtoupper($input['machine_temp1']);
+
+		} elseif (!empty($input['machine_temp2'])) {
+			$machine_temp = strtoupper($input['machine_temp2']);
+		} else {
+			$msge = 'Please scan or select machine';
+			$machines = DB::table('machines')
+			            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+			            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+			            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+			            ->select('machines.id', 'machines.os', 'machines.location', 'machines.brand', 'machines.type', 'machines.code', 'plants.plant')
+			            ->get();
+			$data = DB::table('temp_sell_machines')->where('ses', '=', $session)->get();      
+			return view('Mechanics.sell_machine_scan', compact('data','buyer','session','machines','msge'));
+		}
+		// dd($machine_temp);
+
+		if (isset($machine_temp)) {
+			
+			if (strlen($machine_temp) == 7 OR strlen($machine_temp) == 8) {
+				// dd($machine_temp);
+
+				$exist = DB::table('machines')
+	            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+	            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+	            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+	            ->where('machines.os', '=', $machine_temp)
+	            ->select('machines.id', 'machines.os', 'machines.location', 'machines.brand', 'machines.type', 'machines.code', 'plants.plant')
+	            ->get();
+	            // dd($exist);
+				
+				if (isset($exist[0]->id)) {
+
+						$data_temp = DB::connection('sqlsrv')->select(DB::raw("SELECT os, ses FROM temp_sell_machines WHERE os = '".$exist[0]->os."' AND ses = '".$session."' "));
+						if (isset($data_temp[0]->os)) {
+							
+							$data = DB::table('temp_sell_machines')->where('ses', '=', $session)->get();
+							$msge = 'Machine already scaned';
+							return view('Mechanics.sell_machine_scan', compact('data','buyer','session','machines','msge'));
+						}
+				} else {
+					
+					$data = DB::table('temp_sell_machines')->where('ses', '=', $session)->get();
+					$msge = 'Mmachine does not exist in table';
+					return view('Mechanics.sell_machine_scan', compact('data','buyer','session','machines','msge'));
+				}
+			} else {
+				
+				$data = DB::table('temp_sell_machines')->where('ses', '=', $session)->get();
+				$msge = 'Machine barcode must have 7 or 8 characters';
+				return view('Mechanics.sell_machine_scan', compact('data','buyer','session','machines','msge'));
+			}
+		} else {
+			dd('Error, zovi IT.');
+		}
+		// dd($machine_temp);
+
+		$table = temp_sell_machine::firstOrNew(['os' => strtoupper($machine_temp)]);
+		$table->os_id =  $exist[0]->id;
+		$table->os =  strtoupper($machine_temp);
+		$table->brand =  $exist[0]->brand;
+		$table->type =  $exist[0]->type;
+		$table->code =  $exist[0]->code;
+		$table->buyer =  $buyer;
+		$table->ses =  Session::getId();
+		$table->save();
+
+		$data = DB::table('temp_sell_machines')->where('ses', '=', $session)->get();
+		$msg = 'Machine '.$machine_temp.' added to the list';
+		return view('Mechanics.sell_machine_scan', compact('data','buyer','session','machines','msg'));
+	}
+
+	public function sell_machine_remove($id, $session) {
+
+		$ses = $session;
+		// dd($ses);
+		$ses_data = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM temp_sell_machines WHERE ses = '".$ses."' order by id desc"));
+		// dd($ses_data);
+		$buyer = $ses_data[0]->buyer;
+
+		$machines = DB::table('machines')
+			            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+			            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+			            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+			            ->select('machines.id', 'machines.os', 'machines.location', 'machines.brand', 'machines.type', 'machines.code', 'plants.plant')
+			            ->get();
+
+	    $machine_to_remove = DB::table('temp_sell_machines')
+			            ->where('temp_sell_machines.id', '=', $id)
+			            ->select('temp_sell_machines.id', 'temp_sell_machines.os')
+			            ->get();
+		// dd($machine_to_remove);
+
+		DB::connection('sqlsrv')->delete(DB::raw("DELETE FROM temp_sell_machines WHERE ses = '".$ses."' AND id = '".$id."' "));
+
+		$data = DB::table('temp_sell_machines')->where('ses', '=', $session)->get();
+		$msg = 'Machine '.$machine_to_remove[0]->os.' removed from the list';
+		return view('Mechanics.sell_machine_scan', compact('data','buyer','session','machines','msg'));
+	}
+
+	public function sell_machine_confirm($session) {
+		//
+		$session;
+		$ses_data = DB::table('temp_sell_machines')->where('ses', '=', $session)->get();
+
+		if (!isset($ses_data[0]->id)) {
+
+			$msge = 'List was empty, first insert buyer?';
+			return view('Mechanics.sell_machine', compact('msge','session'));
+		}
+
+		$buyer = $ses_data[0]->buyer;
+		
+		for ($i=0; $i < count($ses_data); $i++) {
+			
+			$os = $ses_data[$i]->os;
+			// dd($os);
+			// try {
+
+				$table = machines::where(['os' => $os])->update(['machine_status' => 'SOLD', 'location' => 'SOLD', 'location_id' => NULL, 'buyer' => $buyer]);
+				
+			// } catch(\Illuminate\Database\QueryException $ex){
+			// 	dd('problem to save');
+			// }
+		}
+		DB::connection('sqlsrv')->delete(DB::raw("DELETE FROM temp_sell_machines WHERE ses = '".$session."' "));
+		
+		$msgs = 'Successfully saved';
+		// return view('Mechanics.sell_machine', compact('msgs','session'));
+		$writeoff = DB::connection('sqlsrv')->select(DB::raw("SELECT COUNT(id) as c FROM machines WHERE machine_status = 'WRITE_OFF' "));
+		$writeoff = $writeoff[0]->c;
+		$sold = DB::connection('sqlsrv')->select(DB::raw("SELECT COUNT(id) as c FROM machines WHERE machine_status = 'SOLD' "));
+		$sold = $sold[0]->c;
+
+		$session = Session::getId();
+
+		return view('Mechanics.disable_machine', compact('writeoff','sold','session','msgs'));
+	}
+
+	public function sell_machine_cancel($session) {
+		//
+		$session;
+		$ses_data = DB::table('temp_sell_machines')->where('ses', '=', $session)->get();
+		// dd($ses_data);
+
+		DB::connection('sqlsrv')->delete(DB::raw("DELETE FROM temp_sell_machines WHERE ses = '".$session."' "));
+
+		$msgs = 'Successfully canceled';
+		// return view('Mechanics.sell_machine', compact('msgs','session'));
+
+		$writeoff = DB::connection('sqlsrv')->select(DB::raw("SELECT COUNT(id) as c FROM machines WHERE machine_status = 'WRITE_OFF' "));
+		$writeoff = $writeoff[0]->c;
+		$sold = DB::connection('sqlsrv')->select(DB::raw("SELECT COUNT(id) as c FROM machines WHERE machine_status = 'SOLD' "));
+		$sold = $sold[0]->c;
+
+		$session = Session::getId();
+
+		return view('Mechanics.disable_machine', compact('writeoff','sold','session','msgs'));
+	}
+
+// SEARCH
+
+	public function search_machine() {
+
+		return view('Search.search_machine');
+	}
+
+	public function search_by_barcode(){
+
+		$machines = DB::table('machines')
+			            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+			            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+			            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+			            ->select('machines.id', 'machines.os', 'machines.location', 'machines.brand', 'machines.type', 'machines.code', 'plants.plant')
+			            ->get();
+
+		return view('Search.search_by_barcode', compact('machines'));	
+	}
+
+	public function search_by_barcode_scan(Request $request) {
+		//
+		$input = $request->all(); 
+		// $session = Session::getId();
+		// dd($input);
+		$machines = DB::table('machines')
+			            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+			            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+			            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+			            ->select('machines.id', 'machines.os', 'machines.location', 'machines.brand', 'machines.type', 'machines.code', 'plants.plant')
+			            ->get();
+
+		if (!empty($input['machine_temp1'])) {
+			$machine_temp = strtoupper($input['machine_temp1']);
+
+		} elseif (!empty($input['machine_temp2'])) {
+			$machine_temp = strtoupper($input['machine_temp2']);			
+
+		} else {
+			
+			$msge = 'Please scan or choose machine';
+			return view('Search.search_by_barcode', compact('machines','msge'));	
+		}
+
+		if (isset($machine_temp)) {
+			
+			if (strlen($machine_temp) == 7 OR strlen($machine_temp) == 8) {
+				// dd($machine_temp);
+
+				$exist = DB::table('machines')
+	            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+	            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+	            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+	            ->where('machines.os', $machine_temp)
+	            ->get();
+	            // dd($exist);
+				
+				if (isset($exist[0]->os)) {
+
+					//
+
+				} else {
+					
+					$msge = 'Machine does not exist in table';
+					return view('Search.search_by_barcode', compact('machines','msge'));
+				}
+			} else {
+				
+				$msge = 'Machine barcode must have 7 or 8 characters';
+				return view('Search.search_by_barcode', compact('machines','msge'));
+			}
+		} else {
+			dd('Error, zovi IT.');
+		}
+		// dd($machine_temp);
+		$data = $exist;
+		// dd($data);
+
+		$comments = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM comments WHERE os = '".$machine_temp."' order by id desc"));
+
+
+		return view('Search.search_by_barcode', compact('data','machines','comments'));
+	}
+
+	public function search_by_location(){
+
+		// $locations = DB::connection('sqlsrv')->select(DB::raw("SELECT 
+		// 			   l.[id]
+		// 		      ,l.[location]
+		// 		      ,a.[area]
+		// 		      ,p.[plant]
+		// 		  FROM [mechanics].[dbo].[locations] as l
+		// 		  JOIN [mechanics].[dbo].[areas] as a ON a.id = l.area_id
+		// 		  JOIN [mechanics].[dbo].[plants] as p ON p.id = a.plant_id
+		// 		  ORDER BY plant desc "));
+
+		$locations = DB::connection('sqlsrv')->select(DB::raw("SELECT *
+			FROM (
+				SELECT 
+					   l.[id]
+				      ,l.[location]
+				      ,a.[area]
+				      ,p.[plant]
+				      ,(SELECT COUNT(id) FROM machines WHERE location = l.location) as counttt
+				  FROM [mechanics].[dbo].[locations] as l
+				  LEFT JOIN [mechanics].[dbo].[areas] as a ON a.id = l.area_id
+				  LEFT JOIN [mechanics].[dbo].[plants] as p ON p.id = a.plant_id
+				  ) as m
+				  GROUP by m.id, m.location, m.area, m.plant, m.counttt
+				  HAVING counttt > 0
+				  ORDER BY m.plant desc ,m.id asc"));
+
+
+		// dd($locations);
+		return view('Search.search_by_location', compact('locations'));	
+	}
+
+	public function search_by_location_scan(Request $request) {
+		//
+		$input = $request->all(); 
+		// $session = Session::getId();
+		// dd($input);
+
+		if ($input['loc1'] != '') {
+
+			$test = DB::connection('sqlsrv')->select(DB::raw("SELECT 
+					   l.[id]
+				      ,l.[location]
+				      ,a.[area]
+				      ,p.[plant]
+				  FROM [mechanics].[dbo].[locations] as l
+				  LEFT JOIN [mechanics].[dbo].[areas] as a ON a.id = l.area_id
+				  LEFT JOIN [mechanics].[dbo].[plants] as p ON p.id = a.plant_id
+				  WHERE location = '".$input['loc1']."'
+				  ORDER BY plant desc "));
+			// dd($test);
+
+			if (empty($test)) {
+				// $locations = DB::connection('sqlsrv')->select(DB::raw("SELECT 
+				// 	   l.[id]
+				//       ,l.[location]
+				//       ,a.[area]
+				//       ,p.[plant]
+				//   FROM [mechanics].[dbo].[locations] as l
+				//   JOIN [mechanics].[dbo].[areas] as a ON a.id = l.area_id
+				//   JOIN [mechanics].[dbo].[plants] as p ON p.id = a.plant_id
+				// 	  ORDER BY plant desc "));
+				$locations = DB::connection('sqlsrv')->select(DB::raw("SELECT *
+			FROM (
+				SELECT 
+					   l.[id]
+				      ,l.[location]
+				      ,a.[area]
+				      ,p.[plant]
+				      ,(SELECT COUNT(id) FROM machines WHERE location = l.location) as counttt
+				  FROM [mechanics].[dbo].[locations] as l
+				  LEFT JOIN [mechanics].[dbo].[areas] as a ON a.id = l.area_id
+				  LEFT JOIN [mechanics].[dbo].[plants] as p ON p.id = a.plant_id
+				  ) as m
+				  GROUP by m.id, m.location, m.area, m.plant, m.counttt
+				  HAVING counttt > 0
+				  ORDER BY m.plant desc ,m.id asc"));
+				$msge = 'Location doesnt exist';
+				return view('Search.search_by_location', compact('locations', 'msge'));	
+			}
+
+			$location = $input['loc1'];
+		// } elseif ($input['loc2'] != '') {
+		// 	$location = $input['loc2'];
+		} elseif ($input['loc3'] != '') {
+			$location = $input['loc3'];
+		} else {
+			
+			$locations = DB::connection('sqlsrv')->select(DB::raw("SELECT *
+			FROM (
+				SELECT 
+					   l.[id]
+				      ,l.[location]
+				      ,a.[area]
+				      ,p.[plant]
+				      ,(SELECT COUNT(id) FROM machines WHERE location = l.location) as counttt
+				  FROM [mechanics].[dbo].[locations] as l
+				  LEFT JOIN [mechanics].[dbo].[areas] as a ON a.id = l.area_id
+				  LEFT JOIN [mechanics].[dbo].[plants] as p ON p.id = a.plant_id
+				  ) as m
+				  GROUP by m.id, m.location, m.area, m.plant, m.counttt
+				  HAVING counttt > 0
+				  ORDER BY m.plant desc ,m.id asc"));
+			$msge = 'Location missing';
+			return view('Search.search_by_location', compact('locations', 'msge'));	
+		}
+
+		// dd($location);
+
+		$data = DB::table('machines')
+        ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+        ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+        ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+        ->where('machines.location', '=', $location)
+        ->get();
+        // dd($exist);
+	
+
+		if (empty($data)) {
+			
+			$locations = DB::connection('sqlsrv')->select(DB::raw("SELECT *
+			FROM (
+				SELECT 
+					   l.[id]
+				      ,l.[location]
+				      ,a.[area]
+				      ,p.[plant]
+				      ,(SELECT COUNT(id) FROM machines WHERE location = l.location) as counttt
+				  FROM [mechanics].[dbo].[locations] as l
+				  LEFT JOIN [mechanics].[dbo].[areas] as a ON a.id = l.area_id
+				  LEFT JOIN [mechanics].[dbo].[plants] as p ON p.id = a.plant_id
+				  ) as m
+				  GROUP by m.id, m.location, m.area, m.plant, m.counttt
+				  HAVING counttt > 0
+				  ORDER BY m.plant desc ,m.id asc"));
+			$msge = 'No machines on location '.$location;
+
+			return view('Search.search_by_location', compact('locations', 'msge'));	
+		}
+
+		$locations = DB::connection('sqlsrv')->select(DB::raw("SELECT *
+			FROM (
+				SELECT 
+					   l.[id]
+				      ,l.[location]
+				      ,a.[area]
+				      ,p.[plant]
+				      ,(SELECT COUNT(id) FROM machines WHERE location = l.location) as counttt
+				  FROM [mechanics].[dbo].[locations] as l
+				  LEFT JOIN [mechanics].[dbo].[areas] as a ON a.id = l.area_id
+				  LEFT JOIN [mechanics].[dbo].[plants] as p ON p.id = a.plant_id
+				  ) as m
+				  GROUP by m.id, m.location, m.area, m.plant, m.counttt
+				  HAVING counttt > 0
+				  ORDER BY m.plant desc ,m.id asc"));
+
+		return view('Search.search_by_location', compact('data','locations'));
+	}
+
+// ADD COMMENT
+
+	public function add_comment() {
+
+
+		$machines = DB::connection('sqlsrv')->select(DB::raw("SELECT os, brand, type, code FROM machines order by id"));
+
+		return view('Mechanics.add_comment', compact('machines'));
+	}
+
+	public function add_comment_scan(Request $request) {
+		//
+		$input = $request->all(); 
+		// $session = Session::getId();
+		// dd($input);
+
+		if (!empty($input['machine1'])) {
+
+			$test = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM machines
+			WHERE os = '".strtoupper($input['machine1'])."' "));
+			// dd($test);
+
+			if (empty($test)) {
+				$machines = DB::connection('sqlsrv')->select(DB::raw("SELECT os, brand, type, code FROM machines order by id"));
+				$msge = 'Machine doesnt exist';
+				return view('Mechanics.add_comment', compact('machines','msge'));
+			}
+
+			$machine = strtoupper($input['machine1']);
+
+		// } elseif (!empty($input['machine2'])) {
+
+		// 	$machine = $input['machine2'];
+
+		} elseif (!empty($input['machine3'])) {
+
+			$machine = $input['machine3'];	
+		} else {
+
+			$machines = DB::connection('sqlsrv')->select(DB::raw("SELECT os, brand, type, code FROM machines order by id"));
+				$msge = 'Please scan or choose machine';
+				return view('Mechanics.add_comment', compact('machines','msge'));
+
+
+		}
+
+		$data2 = DB::table('machines')
+        ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+        ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+        ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+        ->where('machines.os', '=', $machine)
+        ->get();
+        // dd($data2);
+
+        if (isset($data2)) {
+        	
+        	$brand = $data2[0]->brand;
+        	$type = $data2[0]->type;
+        	$code = $data2[0]->code;
+        	$location = $data2[0]->location;
+        	$area = $data2[0]->area;
+        	$plant = $data2[0]->plant;
+        	$machine_status = $data2[0]->machine_status;
+        	$remark_su = $data2[0]->remark_su;
+        	$remark_ki = $data2[0]->remark_ki;
+        }
+
+		$comments = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM comments WHERE os = '".$machine."' order by id desc"));
+		return view('Mechanics.add_comment_post', compact('machine','brand','type','code','location','area','plant','machine_status','remark_su','remark_ki','comments'));
+
+	}
+
+	public function delete_comment_post($id) {
+		// dd($id);
+
+		return view('Mechanics.delete_comment_post_confirm', compact('id'));
+	}
+
+	public function delete_comment_post_confirm($id) {
+		// dd($id);
+
+		DB::connection('sqlsrv')->delete(DB::raw("DELETE FROM [comments] WHERE id = '".$id."' "));
+		
+		return Redirect::to('add_comment');
+	}
+
+	public function add_comment_post(Request $request) {
+		//
+		$input = $request->all(); 
+		// $session = Session::getId();
+		// dd($input);
+
+		$machine = $input['machine'];
+		$user = $mechanic = Session::get('mechanic');
+
+		$data2 = DB::table('machines')
+        ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+        ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+        ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+        ->where('machines.os', '=', $machine)
+        ->get();
+
+        if (isset($data2)) {
+        	
+        	$brand = $data2[0]->brand;
+        	$type = $data2[0]->type;
+        	$code = $data2[0]->code;
+        	$location = $data2[0]->location;
+        	$area = $data2[0]->area;
+        	$plant = $data2[0]->plant;
+        	$machine_status = $data2[0]->machine_status;
+        	$remark_su = $data2[0]->remark_su;
+        	$remark_ki = $data2[0]->remark_ki;
+        }
+
+
+		if (isset($input['comment']) AND (!empty($input['comment']))) {
+			
+			$os_id_check = DB::table('machines')
+            	->where('machines.os', '=', $machine)
+            	->get();
+            $os_id = $os_id_check[0]->id;
+
+			$table = new comment;
+			$table->os = $machine;
+			$table->os_id = $os_id;
+			$table->comment = $input['comment'];
+			$table->user = $user;
+			$table->save();
+
+		} else {
+
+			$comments = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM comments WHERE os = '".$machine."' order by id desc"));
+			$msge = 'Please add comment';
+			return view('Mechanics.add_comment_post', compact('machine','brand','type','code','location','area','plant','machine_status','remark_su','remark_ki','comments','msge'));
+
+		}
+
+		$comments = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM comments WHERE os = '".$machine."' order by id desc"));
+		$msgs = 'Successfully saved';
+		return view('Mechanics.add_comment_post', compact('machine','brand','type','code','location','area','plant','machine_status','remark_su','remark_ki','comments','msgs'));
+
+	}
 }

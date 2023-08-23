@@ -5,7 +5,7 @@
 	<div class="row vertical-center-row">
 		<div class="text-center col-md-6 col-md-offset-3">
 			<div class="panel panel-default">
-				<div class="panel-heading" >Scan OS - 
+				<div class="panel-heading" >Scan machine - 
 						@if (isset($plant_from))
 							<b><i>FROM {{ $plant_from }}</i></b>
 						@endif
@@ -48,24 +48,52 @@
 					@if ((isset($plant_from)) AND (isset($plant_to)))
 						{!! Form::hidden('plant_from', $plant_from, ['class' => 'form-control']) !!}
 						{!! Form::hidden('plant_to', $plant_to, ['class' => 'form-control']) !!}
-						
+					@endif
+
+					@if (isset($transfer_doc))
+						{!! Form::hidden('transfer_doc', $transfer_doc) !!}
+					@else 
+						{!! Form::hidden('transfer_doc', '') !!}
 					@endif
 
 				<div class="panel-body">
-					{!! Form::text('machine_temp', null, ['class' => 'form-control','autofocus' => 'autofocus']) !!}
+					{!! Form::text('machine_temp1', null, ['class' => 'form-control','autofocus' => 'autofocus']) !!}
 					<br>
-					{!! Form::submit('Confirm machine', ['class' => 'btn btn-success center-block']) !!}
+					
+					<!-- <p>Scan machine:</p> -->
+					<p>Select machine manualy from the list: </p>
+					<p><i>Filters included. Plant = {{$plant_from}} </i></p>
+                    <select name="machine_temp2" id='select2' class="select form-con rol sele ct-form chos en">
+                        <option value="" selected></option>
+                        
+                        @foreach ($machines as $m)
+                        <option value="{{ $m->os }}">
+                            {{ $m->os }} \ {{ $m->brand }} \ {{ $m->type }} \ {{ $m->code}}
+                        </option>
+                        @endforeach
+                    </select>
+					<hr>
+					<p><b>Document number (otpremnica) <span style="color:red">*</span> </b>:</p>
+                    @if (isset($transfer_doc))
+						{!! Form::text('transfer_doc', $transfer_doc, ['class' => 'form-control','disabled' => 'disabled']) !!}
+					@else 
+						{!! Form::text('transfer_doc', null, ['class' => 'form-control']) !!}
+					@endif
+					<hr>
+					
+					{!! Form::submit('Confirm machine', ['class' => 'btn btn-info btn-lg center-block']) !!}
 					@include('errors.list')
 				</div>
 				{!! Form::close() !!}
 
-				@if(isset($data))
+				@if(isset($data) AND (!empty($data)))
+				<hr>
 				<input type="hidden" id="_token" value="<?php echo csrf_token(); ?>">
 				<table class="table table-striped table-bordered" >
 					<tbody>
 						@foreach ($data as $d)
 						<tr>
-							<td>{{ $d->os }} 
+							<td><b>{{ $d->os }} / {{ $d->brand }} / {{ $d->type }} / {{ $d->code }}</b>
 								&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 								&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 								<a href="{{ url('transfer_machine_remove/'.$d->id.'/'.$d->ses) }}"><big><strong><span style="color:red">X</span></strong></big></a>
@@ -74,16 +102,18 @@
 						@endforeach
 					</tbody>
 				</table>
+				<!-- <br>	 -->
 				@endif
-				
+
 				<!-- <br>	 -->
 				<hr>		
 				<div>
-				@if (isset($plant_to))
-					<a href="{{ url('transfer_machine_confirm/'.$session) }}" class="btn btn-danger">Confirm list</a>
+				@if (!empty($data))
+				<a href="{{ url('transfer_machine_confirm/'.$session) }}" class="btn btn-lg btn-success"><span class="glyphicon glyphicon-ok">&nbsp;</span>Confirm list</a>&nbsp;&nbsp;&nbsp;
 				@else
-					<a href="{{ url('transfer_machine_confirm/'.$session) }}" class="btn btn-danger" disabled>Confirm list</a>				
+				<a href="{{ url('transfer_machine_confirm/'.$session) }}" class="btn btn-lg btn-success disabled"><span class="glyphicon glyphicon-ok">&nbsp;</span>Confirm list</a>&nbsp;&nbsp;&nbsp;
 				@endif
+				<a href="{{ url('transfer_machine_cancel/'.$session) }}" class="btn btn-lg btn-danger"><span class="glyphicon glyphicon-remove">&nbsp;</span>Cancel and return</a>
 				</div>
 				<br>
 				

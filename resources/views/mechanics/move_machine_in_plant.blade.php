@@ -25,12 +25,46 @@
 					
 				<div class="panel-body">
 	                <p>Destination location:</p>
-	            	{!! Form::text('location_new', '' , ['class' => 'form-control', 'autofocus' => 'autofocus']) !!}
+	            	{!! Form::text('location_new1', '' , ['class' => 'form-control', 'autofocus' => 'autofocus']) !!}
 				</div>
 				<br>
-				{!! Form::submit('Next', ['class' => 'btn  btn-success center-block']) !!}
-	            <br>
-
+				
+	            <!-- <br> -->
+<!-- 
+	            <div class="panel-body">
+					<p>Select destination manualy from the list : </p>
+                    <select name="location_new2" class="select form-control select-form">
+                        <option value="" selected></option>
+                        
+                        @foreach ($locations as $m)
+                        <option value="{{ $m->location }}">
+                            <span >{{ $m->plant }} &nbsp;&nbsp; {{ $m->area }} &nbsp;&nbsp;&nbsp; {{ $m->location }} </span>
+                        </option>
+                        @endforeach
+                    </select>
+					<br>
+					<br>
+					
+					@include('errors.list')
+				</div> -->
+				
+				<div class="panel-body">
+					<!-- <p>Scan machine:</p> -->
+					<p>Select destination manualy from the list (search): </p>
+                    <select name="location_new3" id='select2' class="select form-con rol sele ct-form cho sen" style="min-width:350px">
+                        <option value="" selected></option>
+                        
+                        @foreach ($locations as $m)
+                        <option value="{{ $m->location }}">
+                            {{ $m->plant }} &nbsp;&nbsp; {{ $m->area }} &nbsp;&nbsp;&nbsp; {{ $m->location }} 
+                        </option>
+                        @endforeach
+                    </select>
+					<br>
+				
+				</div>
+				
+				{!! Form::submit('Next', ['class' => 'btn  btn-success btn-lg center-block']) !!}
 	            @include('errors.list')
 	            {!! Form::close() !!}
 
@@ -46,7 +80,7 @@
 				@endif
 
 	            <hr>
-	            <a href="{{ url('afterlogin/') }}" class="btn btn-default center-bl ock">Back</a>
+	            <a href="{{ url('afterlogin/') }}" class="btn btn-default btn-lg center-bl ock">Back</a>
 	            <br>
 	            <br>
 			</div>	

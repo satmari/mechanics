@@ -233,6 +233,7 @@ class adminController extends Controller {
 				$inteos_machine_status = $data[$i]->Kikinda_status;
 			} else {
 				$inteos_status = 'ERROR';
+				$inteos_status = NULL;
 				$inteos_line = NULL;
 				$inteos_machine_status = NULL;
 
@@ -331,6 +332,7 @@ class adminController extends Controller {
 
 						Machines::where('os', $os)->update([
 							'machine_status' => 'JUST_REMOVED',
+							'inteos_status' => $inteos_status,
 							'inteos_machine_status' => $inteos_machine_status,
 							'brand' => $brand,
 							'code' => $code,
@@ -338,7 +340,107 @@ class adminController extends Controller {
 							'remark_su' => $remark_su,
 							'remark_ki' => $remark_ki
 						]);
+
+					} elseif ($find_existing[0]->machine_status == 'NEW') {
+
+						if ($inteos_status == 'SU') {
+
+							Machines::where('os', $os)->update([
+							
+							'location' => 'RECEIVING_SU',
+							'location_id' => 118,
+							'brand' => $brand,
+							'code' => $code,
+							'type' => $type,
+							'remark_su' => $remark_su,
+							'remark_ki' => $remark_ki
+							]);
+
+						}	else if ($inteos_status == 'KI') {
+
+							Machines::where('os', $os)->update([
+							
+							'location' => 'RECEIVING_KI',
+							'location_id' => 119,
+							'brand' => $brand,
+							'code' => $code,
+							'type' => $type,
+							'remark_su' => $remark_su,
+							'remark_ki' => $remark_ki
+							]);
+
+						}	else if ($inteos_status == 'SE') {
+							
+							Machines::where('os', $os)->update([
+							
+							'location' => 'RECEIVING_SE',
+							'location_id' => 120,
+							'brand' => $brand,
+							'code' => $code,
+							'type' => $type,
+							'remark_su' => $remark_su,
+							'remark_ki' => $remark_ki
+							]);
+
+						}
+
+
+					} else {
+
+						Machines::where('os', $os)->update([
+							'inteos_line' => '',
+							'inteos_machine_status' => '',
+							'brand' => $brand,
+							'code' => $code,
+							'type' => $type,
+							'remark_su' => $remark_su,
+							'remark_ki' => $remark_ki
+						]);
+
 					}
+
+					/*
+					// go live
+					if ($inteos_status_su == 'ON') {
+
+						Machines::where('os', $os)->update([
+							'location' => 'RECEIVING_SU',
+							'location_id' => 118,
+							'machine_status' => 'STOCK',
+							'inteos_machine_status' => $inteos_machine_status,
+							'inteos_status' => 'SU',
+							'brand' => $brand,
+							'code' => $code,
+							'type' => $type,
+							'remark_su' => $remark_su,
+							'remark_ki' => $remark_ki
+						]);
+					} elseif ($inteos_status_ki == 'ON') {
+
+						Machines::where('os', $os)->update([
+							'location' => 'RECEIVING_KI',
+							'location_id' => 119,
+							'machine_status' => 'STOCK',
+							'inteos_machine_status' => $inteos_machine_status,
+							'inteos_status' => 'KI',
+							'brand' => $brand,
+							'code' => $code,
+							'type' => $type,
+							'remark_su' => $remark_su,
+							'remark_ki' => $remark_ki
+						]);
+						
+					} else {
+
+
+						Machines::where('os', $os)->update([
+							'machine_status' => 'ALL_OFF',
+							'inteos_machine_status' => $inteos_machine_status,
+							'inteos_status' => $inteos_status,
+							
+						]);
+					}
+					*/
 				}
 			}
 		}
@@ -346,17 +448,40 @@ class adminController extends Controller {
 		// dd('Stop');
 		if ($err != '') {
 			
-			print_r($err);
+			// print_r($err);
 		}
 
-		$data = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM [machines]"));
+		// $data = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM [machines]"));
+		$data = DB::connection('sqlsrv')->select(DB::raw("SELECT *
+				,(SELECT convert(varchar, c.[created_at], 105)+' ' +c.[comment] + ' \n '
+					FROM [mechanics].[dbo].[comments] as c
+					WHERE c.os =  m.os
+					FOR XML PATH('') ) as comment
+				,p.plant
+			  	FROM [mechanics].[dbo].[machines] as m
+			  	LEFT JOIN [mechanics].[dbo].locations as l ON l.id = m.location_id
+			  	LEFT JOIN [mechanics].[dbo].areas as a ON a.id = l.area_id
+			  	LEFT JOIN [mechanics].[dbo].plants as p ON p.id = a.plant_id
+			  	ORDER BY m.os asc"));
+
 		return view('Admin.machines_in_app',compact('data'));
 
 	}
 
 	public function machines_table() {
 
-		$data = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM [machines]"));
+		$data = DB::connection('sqlsrv')->select(DB::raw("SELECT *
+				,(SELECT convert(varchar, c.[created_at], 105)+' ' +c.[comment] + ' \n '
+					FROM [mechanics].[dbo].[comments] as c
+					WHERE c.os =  m.os
+					FOR XML PATH('') ) as comment
+				,p.plant
+			  	FROM [mechanics].[dbo].[machines] as m
+			  	LEFT JOIN [mechanics].[dbo].locations as l ON l.id = m.location_id
+			  	LEFT JOIN [mechanics].[dbo].areas as a ON a.id = l.area_id
+			  	LEFT JOIN [mechanics].[dbo].plants as p ON p.id = a.plant_id
+			  	ORDER BY m.os asc"));
+
 		return view('Admin.machines_in_app',compact('data'));
 
 	}
