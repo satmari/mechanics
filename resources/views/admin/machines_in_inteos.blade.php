@@ -39,7 +39,6 @@
                 -->
                     <thead>
                         <tr>
-                            
                             <th><span style=""><b>MachNum</b></span></th>
                             <th><span style=""><b>Brand</b></span></th>
                             <th><span style=""><b>MaCod</b></span></th>
@@ -52,13 +51,11 @@
                             <th><span style="color:blue;"><big><b>Kikinda status</span></b></big></th>
                             <th><span style="color:blue;"><big><b>Inteos status</span></b></big></th>
                             <th><span style="color:blue;"><big><b>Line</span></b></big></th>
-                                                       
                         </tr>
                     </thead>
                     <tbody class="searchable">
                     @foreach ($data as $req)
                        <tr>
-                            
                             <td>{{ $req->MachNum }}</td>
                             <td>{{ $req->Brand }}</td>
                             <td>{{ $req->MaCod }}</td>
@@ -79,10 +76,8 @@
                             @else
                             <td></td><td></td><td></td>
                             @endif
-
                         </tr>
                     @endforeach
-                    
                     </tbody>                
             </div>
         </div>

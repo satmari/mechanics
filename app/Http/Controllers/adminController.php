@@ -27,9 +27,8 @@ use Exception;
 
 class adminController extends Controller {
 
-	public function index()
-	{
-		//
+	public function index() {
+			//
 	}
 
 	public function machines_in_inteos() {
@@ -121,8 +120,7 @@ class adminController extends Controller {
 
 	public function update_from_inteos() {
 
-		try
-		{
+		try {
 		$data = DB::connection('sqlsrv2')->select(DB::raw("SELECT 
 			mp.MachNum
 			--,(SELECT MachNum FROM [172.27.161.221\INTEOSKKA].[BdkCLZKKA].[dbo].[CNF_MachPool] WHERE [Cod] = mp.Cod) as MAchNum_KIK
@@ -153,12 +151,12 @@ class adminController extends Controller {
 					WHEN (SELECT [InRepair] FROM [BdkCLZG].[dbo].[CNF_MachPool] WHERE [Cod] = mp.Cod) IS NULL THEN 'Available'
 				END
 				)
-					WHEN (SELECT [MaStat] FROM [BdkCLZG].[dbo].[CNF_ModMach] WHERE MdCod = mp.Cod) = 0 THEN 'Spare'
-					WHEN (SELECT [MaStat] FROM [BdkCLZG].[dbo].[CNF_ModMach] WHERE MdCod = mp.Cod) = 1 THEN 'Needed'
-					WHEN (SELECT [MaStat] FROM [BdkCLZG].[dbo].[CNF_ModMach] WHERE MdCod = mp.Cod) = 4 THEN 'Ready for next change'
-					WHEN (SELECT [MaStat] FROM [BdkCLZG].[dbo].[CNF_ModMach] WHERE MdCod = mp.Cod) = 5 THEN 'On stock'
-					WHEN (SELECT [MaStat] FROM [BdkCLZG].[dbo].[CNF_ModMach] WHERE MdCod = mp.Cod) = 6 THEN 'To be repaired'
-				END) as Subotica_status
+				WHEN (SELECT [MaStat] FROM [BdkCLZG].[dbo].[CNF_ModMach] WHERE MdCod = mp.Cod) = 0 THEN 'Spare'
+				WHEN (SELECT [MaStat] FROM [BdkCLZG].[dbo].[CNF_ModMach] WHERE MdCod = mp.Cod) = 1 THEN 'Needed'
+				WHEN (SELECT [MaStat] FROM [BdkCLZG].[dbo].[CNF_ModMach] WHERE MdCod = mp.Cod) = 4 THEN 'Ready for next change'
+				WHEN (SELECT [MaStat] FROM [BdkCLZG].[dbo].[CNF_ModMach] WHERE MdCod = mp.Cod) = 5 THEN 'On stock'
+				WHEN (SELECT [MaStat] FROM [BdkCLZG].[dbo].[CNF_ModMach] WHERE MdCod = mp.Cod) = 6 THEN 'To be repaired'
+			END) as Subotica_status
 
 			,(CASE
 				WHEN (SELECT [MaStat] FROM [172.27.161.221\INTEOSKKA].[BdkCLZKKA].[dbo].[CNF_ModMach] WHERE MdCod = mp.Cod) is null THEN --'test'
@@ -193,6 +191,7 @@ class adminController extends Controller {
 			WHERE MachNum != '' AND (mt.MaCod <> 'CHANGE LAYOUT') AND (mt.MaCod <> 'PRIV.KOD')
 			ORDER BY MachNum ASC"));
 		// dd($data[0]);
+			
 
 		}
 		catch(Exception $e)
@@ -202,8 +201,13 @@ class adminController extends Controller {
 			dd("Odredjena masina se nalazi na vise od jedne lokacije u Inteosu, zvati IT sektor");
 		}
 		
+
 		$err= '';
 		for ($i=0; $i < count($data); $i++) { 
+			
+			// if ($data[$i]->MachNum == '10008806') {
+			// 	// dd($data[$i]);
+			// }
 			
 			$os = $data[$i]->MachNum;
 			$brand = $data[$i]->Brand;
@@ -254,6 +258,7 @@ class adminController extends Controller {
 			// dd($find_existing);
 
 			if (!isset($find_existing[0]->id)) {
+				// NEW MACHINE
 				// dd('Not exist');
 
 				$table = new machines;
@@ -270,7 +275,7 @@ class adminController extends Controller {
 				if ($inteos_status != 'ERROR' AND $inteos_line != NULL AND $inteos_line != '') {
 					$table->inteos_status = $inteos_status;
 					$table->inteos_line = $inteos_line;
-					$table->inteos_machine_status = $inteos_machine_status;	
+					$table->inteos_machine_status = $inteos_machine_status;
 				}
 				$table->save();
 
@@ -289,46 +294,70 @@ class adminController extends Controller {
 							$inteos_machine_status == 'Needed' OR 
 							$inteos_machine_status == 'Ready for next change' OR 
 							$inteos_machine_status == 'On stock' OR 
-							$inteos_machine_status == 'To be repaired'  ) {
-					// IN_LINE
-					// Needed, Spare, On Stock, Ready for next change, To be repared
-					// print_r('Existing location: '. $find_existing[0]->location.'<br/>');
-					// print_r('Existing status: '. $find_existing[0]->machine_status.'<br/>');
-					// print_r('location: '. $inteos_line.'<br/>');
-					// print_r('status: '. $inteos_status.'<br/>');
+							$inteos_machine_status == 'To be repaired' ) {
 
-					// if ($inteos_line != $find_existing[0]->location) {
+							// IN_LINE
+							// Needed, Spare, On Stock, Ready for next change, To be repared
+							// print_r('Existing location: '. $find_existing[0]->location.'<br/>');
+							// print_r('Existing status: '. $find_existing[0]->machine_status.'<br/>');
+							// print_r('location: '. $inteos_line.'<br/>');
+							// print_r('status: '. $inteos_status.'<br/>');
+
+							// if ($inteos_line != $find_existing[0]->location) {
 						
-						$find_location = DB::connection('sqlsrv')->select(DB::raw("SELECT [id],[location] FROM [locations] WHERE location = '".$inteos_line."' "));
-						// dd($find_location);
-						if (!isset($find_location[0]->id)) {
-							// print_r('Missing location "'.$inteos_line.'" in app!');
-							$err = $err.' - '.'For machine '.$os.' (status: '.$inteos_machine_status.') is missing line '.$inteos_line.' in application '.' - <br>';
-						} else {
+							$find_location = DB::connection('sqlsrv')->select(DB::raw("SELECT [id],[location] FROM [locations] WHERE location = '".$inteos_line."' "));
+							// dd($find_location);
+							if (!isset($find_location[0]->id)) {
+								// print_r('Missing location "'.$inteos_line.'" in app!');
+								$err = $err.' - '.'For machine '.$os.' (status: '.$inteos_machine_status.') is missing line '.$inteos_line.' in application '.' - <br>';
+							} else {
 
-							$new_location = $find_location[0]->location;
-							$new_location_id = $find_location[0]->id;
+								$new_location = $find_location[0]->location;
+								$new_location_id = $find_location[0]->id;
 
-							Machines::where('os', $os)->update([
-								'location' => $new_location,
-								'location_id' => $new_location_id,
-								'machine_status' => 'IN_LINE',
-								'inteos_status' => $inteos_status,
-								'inteos_line' => $new_location,
-								'inteos_machine_status' => $inteos_machine_status,
-								'brand' => $brand,
-								'code' => $code,
-								'type' => $type,
-								'remark_su' => $remark_su,
-								'remark_ki' => $remark_ki
-							]);
-						}
-					// }
+								if ($find_existing[0]->machine_status == 'IN_LINE') {
+									
+									Machines::where('os', $os)->update([
+										'location' 		 => $new_location,
+										'location_id'	 => $new_location_id,
+										'machine_status' => 'IN_LINE',
+										'inteos_status'  => $inteos_status,
+										'inteos_line'	 => $new_location,
+										'inteos_machine_status' => $inteos_machine_status,
+										'brand' => $brand,
+										'code'  => $code,
+										'type'  => $type,
+										'remark_su' => $remark_su,
+										'remark_ki' => $remark_ki
+
+									]);
+
+								} else {
+									Machines::where('os', $os)->update([
+										'location' 		 => $new_location,
+										'location_id'	 => $new_location_id,
+										'machine_status' => 'IN_LINE',
+										'inteos_status'  => $inteos_status,
+										'inteos_line'	 => $new_location,
+										'inteos_machine_status' => $inteos_machine_status,
+										'brand' => $brand,
+										'code'  => $code,
+										'type'  => $type,
+										'remark_su' => $remark_su,
+										'remark_ki' => $remark_ki,
+										'comment_ws' => NULL
+									]);	
+								}
+
+								
+							}
 
 				} elseif ($inteos_machine_status == 'In Repair' OR $inteos_machine_status == 'Available') {
 					// Available, In repair
 
 					if ($find_existing[0]->machine_status == 'IN_LINE' ) {
+
+						$da = date('Y-m-d_H-i-s');
 
 						Machines::where('os', $os)->update([
 							'machine_status' => 'JUST_REMOVED',
@@ -338,7 +367,8 @@ class adminController extends Controller {
 							'code' => $code,
 							'type' => $type,
 							'remark_su' => $remark_su,
-							'remark_ki' => $remark_ki
+							'remark_ki' => $remark_ki,
+							'just_removed_info' => $find_existing[0]->location.' '.$da
 						]);
 
 					} elseif ($find_existing[0]->machine_status == 'NEW') {
@@ -346,14 +376,13 @@ class adminController extends Controller {
 						if ($inteos_status == 'SU') {
 
 							Machines::where('os', $os)->update([
-							
-							'location' => 'RECEIVING_SU',
-							'location_id' => 118,
-							'brand' => $brand,
-							'code' => $code,
-							'type' => $type,
-							'remark_su' => $remark_su,
-							'remark_ki' => $remark_ki
+								'location' => 'RECEIVING_SU',
+								'location_id' => 118,
+								'brand' => $brand,
+								'code' => $code,
+								'type' => $type,
+								'remark_su' => $remark_su,
+								'remark_ki' => $remark_ki
 							]);
 
 						}	else if ($inteos_status == 'KI') {
@@ -381,9 +410,7 @@ class adminController extends Controller {
 							'remark_su' => $remark_su,
 							'remark_ki' => $remark_ki
 							]);
-
 						}
-
 
 					} else {
 
@@ -445,10 +472,11 @@ class adminController extends Controller {
 			}
 		}
 
-		// dd('Stop');
+		
 		if ($err != '') {
 			
 			// print_r($err);
+			// dd('Stop');
 		}
 
 		// $data = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM [machines]"));
@@ -458,14 +486,15 @@ class adminController extends Controller {
 					WHERE c.os =  m.os
 					FOR XML PATH('') ) as comment
 				,p.plant
+				,(SELECT image FROM [mechanics].[dbo].[class_tables] WHERE brand = m.brand and code = m.code AND class = m.type) as image
 			  	FROM [mechanics].[dbo].[machines] as m
 			  	LEFT JOIN [mechanics].[dbo].locations as l ON l.id = m.location_id
 			  	LEFT JOIN [mechanics].[dbo].areas as a ON a.id = l.area_id
 			  	LEFT JOIN [mechanics].[dbo].plants as p ON p.id = a.plant_id
+			  	WHERE (m.machine_status != 'SOLD' AND m.machine_status != 'WRITE_OFF' AND m.machine_status != 'BORROWED')
 			  	ORDER BY m.os asc"));
 
 		return view('Admin.machines_in_app',compact('data'));
-
 	}
 
 	public function machines_table() {
@@ -476,13 +505,16 @@ class adminController extends Controller {
 					WHERE c.os =  m.os
 					FOR XML PATH('') ) as comment
 				,p.plant
+				,(SELECT image FROM [mechanics].[dbo].[class_tables] WHERE brand = m.brand and code = m.code AND class = m.type) as image
 			  	FROM [mechanics].[dbo].[machines] as m
 			  	LEFT JOIN [mechanics].[dbo].locations as l ON l.id = m.location_id
 			  	LEFT JOIN [mechanics].[dbo].areas as a ON a.id = l.area_id
 			  	LEFT JOIN [mechanics].[dbo].plants as p ON p.id = a.plant_id
+			  	WHERE (m.machine_status != 'SOLD' AND m.machine_status != 'WRITE_OFF' AND m.machine_status != 'BORROWED')
 			  	ORDER BY m.os asc"));
 
 		return view('Admin.machines_in_app',compact('data'));
-
 	}
+
+
 }

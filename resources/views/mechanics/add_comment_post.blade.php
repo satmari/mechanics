@@ -57,7 +57,7 @@
 	            @endif
 
 	            <div class="panel-heading" >Info about machine: <br>Location:<b> {{ $location }} </b> , Area: <b>{{ $area }}</b> , Plant: <b>{{ $plant }}</b> , Status: <b>{{ $machine_status }} </b></a></div>
-				<div class="panel-heading" >Remark Inteos Subotica: <br><b>{{ $remark_su }}</b> <br> Remark Inteos Kikinda: <br><b>{{ $remark_ki }}</b> </a></div>
+				<!-- <div class="panel-heading" >Remark Inteos Subotica: <br><b>{{ $remark_su }}</b> <br> Remark Inteos Kikinda: <br><b>{{ $remark_ki }}</b> </a></div> -->
 				<div class="panel-heading" >Machine: <b>{{ $machine }}</b> , Brand: <b>{{ $brand }}</b> , Type: <b>{{ $type }}</b> , Code: <b>{{ $code }}</b></a></div>
 
 		            

@@ -14,6 +14,7 @@ use App\plant;
 use App\area;
 use App\location;
 use App\machines;
+use App\gadget_validation;
 use DB;
 
 use App\User;
@@ -192,7 +193,7 @@ class settingsController extends Controller {
 	public function location()
 	{
 		//
-		$data = DB::connection('sqlsrv')->select(DB::raw("SELECT l.id, l.location, a.area, p.plant
+		$data = DB::connection('sqlsrv')->select(DB::raw("SELECT l.id, l.location, l.active, a.area, p.plant
 		  FROM [mechanics].[dbo].[locations] as l
 		  LEFT JOIN [mechanics].[dbo].[areas] as a ON a.id = l.area_id
 		  LEFT JOIN [mechanics].[dbo].[plants] as p ON p.id = a.plant_id
@@ -275,10 +276,22 @@ class settingsController extends Controller {
 	}
 
 	public function remove_location($id)
-	{
+	{	
+		$check_if = DB::connection('sqlsrv')->select(DB::raw("SELECT m.id
+			FROM [mechanics].[dbo].machines as m
+			JOIN [mechanics].[dbo].locations as l ON l.id = m.location_id
+			WHERE m.location_id = '".$id."'
+			Order by m.id asc
+		"));
+		// dd($check_if);
+		if (isset($check_if[0]->id)) {
+			dd('This location already has some machines, please remove machines first');
+		}
+
 		try {
 			$table = location::findOrFail($id);
-			// $table->delete();
+			$table->active = 0;
+			$table->save();
 		}
 		catch (\Illuminate\Database\QueryException $e) {
 			$msg = "Problem to delete in table";
@@ -287,4 +300,71 @@ class settingsController extends Controller {
 		return Redirect::to('/location');
 	}
 	
+	public function gadget()
+	{
+		//
+		$data = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM gadget_validations"));
+		return view('gadget.gadget', compact('data'));
+	}	
+
+	public function add_gadget()
+	{
+		//
+		$data = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM gadget_validations"));
+		return view('gadget.add_gadget', compact('data'));
+	}
+
+	public function add_gadget_post(Request $request)
+	{
+		//
+		$this->validate($request, ['gadget' => 'required']);
+		$input = $request->all();
+		// dd($input);
+
+		$gadget = $input['gadget'];
+				
+		// try {
+			$table = new gadget_validation;
+			$table->gadget = $gadget;
+			$table->save();
+		// }
+		// catch (\Illuminate\Database\QueryException $e) {
+		// 	dd("Problem to save, try again");
+		// }		
+
+		return Redirect::to('/gadget');
+	}
+
+	public function edit_gadget($id)
+	{
+		//
+		$data = gadget_validations::findOrFail($id);
+		$plants = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM plants"));
+
+		return view('gadget.edit_gadget', compact('data', 'plants'));
+	}
+
+	public function edit_gadget_post($id, Request $request)
+	{
+		$this->validate($request, ['gadget' => 'required']);
+		$input = $request->all(); 
+
+		$gadget = $input['gadget'];
+		
+		// try {
+			$table = gadget_validations::findOrFail($id);
+			$update = DB::connection('sqlsrv')->select(DB::raw("UPDATE machines 
+				SET gadget = '".$gadget."' 
+				WHERE gadget = '".$table->gadget."' "));
+
+			$table->gadget = $gadget;
+			$table->save();
+		// }
+		// catch (\Illuminate\Database\QueryException $e) {
+		// 	dd("Problem to save, try again");
+		// }
+
+
+		return Redirect::to('/gadget');
+	}
 }

@@ -33,8 +33,7 @@
 					<br>
 					<div class="panel-body">
 						<div class="">
-							<a href="{{url('/search_machine')}}" class="btn btn-suc cess btn-lg center-block" style="background-color: #e3e3e3">
-								<span class="glyphicon glyphicon-search" aria-hidden="true">&nbsp;</span>SEARCH MACHINE<br><i>(info about machine)</i><br></a>
+							<a href="{{url('/add_info')}}" class="btn btn-li nk btn-lg center-block" style="background-color: #9eedc7"><span class="glyphicon glyphicon-pencil" aria-hidden="true">&nbsp;</span>UPDATE MACHINE<br> INFORMATION</a>
 						</div>
 					</div>
 					<div class="panel-body">
@@ -80,6 +79,13 @@
 							<a href="{{url('/add_comment')}}" class="btn btn-li nk btn-lg center-block" style="background-color: #d6ede2"><span class="glyphicon glyphicon-pencil" aria-hidden="true">&nbsp;</span>ADD COMMENT TO THE <br>MACHINE<i></i><br></a>
 						</div>
 					</div>
+					<div class="panel-body">
+						<div class="">
+							<a href="{{url('/search_machine')}}" class="btn btn-suc cess btn-lg center-block" style="background-color: #e3e3e3">
+								<span class="glyphicon glyphicon-search" aria-hidden="true">&nbsp;</span>SEARCH MACHINE<br><i>(info about machine)</i><br></a>
+						</div>
+					</div>
+					
 					
 					@endif
 					
@@ -96,6 +102,12 @@
 						<div class="">
 							<a href="{{url('/borrow_machine')}}" class="btn btn-warning btn-lg center-block">
 								<span class="glyphicon glyphicon-new-window" aria-hidden="true">&nbsp;</span>BORROW MACHINE <br><i>(Lazarevac, Fiorano, Comprom...)</i><br></a>
+						</div>
+					</div>
+					<div class="panel-body">
+						<div class="">
+							<a href="{{url('/move_machine_in_plant')}}" class="btn btn-success btn-lg center-block">
+								<span class="glyphicon glyphicon-import" aria-hidden="true">&nbsp;</span>MOVE MACHINE <br><i>(move in the same plant)</i><br></a>
 						</div>
 					</div>
 

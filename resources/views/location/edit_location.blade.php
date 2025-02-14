@@ -5,7 +5,9 @@
 	<div class="row vertical-center-row">
 		<div class="text-center col-md-5 col-md-offset-4">
 			<div class="panel panel-default">
-				<div class="panel-heading"><b>Edit location</b></div>
+				<div class="panel-heading"><b>Edit location</b><br>
+					<a href="{{ url('remove_location/'.$data->id) }}" style="color:red">Set as inactive</a>
+				</div>
 				
 				
 					{!! Form::open(['url' => 'edit_location_post/'.$data->id]) !!}

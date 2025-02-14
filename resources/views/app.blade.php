@@ -38,34 +38,47 @@
 					<span class="icon-bar"></span>
 					<span class="icon-bar"></span>
 				</button>
-				<a class="navbar-brand" href="{{ url('#') }}">Mechanics App</a>
+				<a class="navbar-brand" href="{{ url('/') }}">Mechanics App</a>
 			</div>
 
 			<div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
 				<ul class="nav navbar-nav">
-					<li><a href="{{ url('/') }}">Home</a></li>
-					<li class="dropdown">
-						<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">Settings<span class="caret"></span></a>
-						<ul class="dropdown-menu" role="menu">
-							<li><a href="{{ url('plant') }}">Plant</a></li>
-							<li role="separator" class="divider"></li>
-							<li><a href="{{ url('area') }}">Area</a></li>
-							<li role="separator" class="divider"></li>
-							<li><a href="{{ url('location') }}">Location</a></li>
-							
-						</ul>
-					</li>
+					
 					@if (Auth::guest())
 					@else
 						@if (Auth::user()->name == 'mechanics' OR Auth::user()->name == 'admin')
-							<!-- <li><a href="{{ url('/machines_in_inteos') }}">Machines in Inteos </a></li> -->
+							<li><a href="{{ url('/') }}">Home</a></li>
+							<li class="dropdown">
+								<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">Settings<span class="caret"></span></a>
+								<ul class="dropdown-menu" role="menu">
+									<li><a href="{{ url('plant') }}">Plant</a></li>
+									<li role="separator" class="divider"></li>
+									<li><a href="{{ url('area') }}">Area</a></li>
+									<li role="separator" class="divider"></li>
+									<li><a href="{{ url('location') }}">Location</a></li>
+									<li role="separator" class="divider"></li>
+									<li><a href="{{ url('gadget') }}">Gadget</a></li>
+									<!-- <li role="separator" class="divider"></li> -->
+								</ul>
+							</li>
+							<!-- <li><a href="{{ url('/machines_in_inteos') }}">Machines in Inteos</a></li> -->
 							<li><a href="{{ url('/update_from_inteos') }}">Update machines </a></li>
 							<li><a href="{{ url('/machines_table') }}">Machines table</a></li>
+							<li><a href="{{ url('/advanced_search') }}">Advanced search</a></li>
+							<li><a href="{{ url('/class_table') }}">Class table</a></li>
+							<li><a href="{{ url('/import') }}">Import machines</a></li>
 						@endif
+						@if (Auth::user()->name == 'magacin')
+							<li><a href="{{ url('/') }}">Home</a></li>
+							<li><a href="{{ url('/machines_table') }}">Machines table</a></li>
+						@endif
+						@if (Auth::user()->name == 'workstudy')
+							<li><a href="{{ url('/') }}">Home</a></li>
+							<li><a href="{{ url('/machines_table') }}">Machines table</a></li>
+						@endif
+
 					@endif
 				</ul>
-				
-
 				<ul class="nav navbar-nav navbar-right">
 					@if (Auth::guest())
 						<li><a href="{{ url('/auth/login') }}">Login</a></li>
@@ -118,6 +131,18 @@
 		$(document).ready(function() {
 			
 			$("#select2").select2({
+			  
+			});
+			$("#select3").select2({
+			  
+			});
+			$("#select4").select2({
+			  
+			});
+			$("#select5").select2({
+			  
+			});
+			$("#select6").select2({
 			  
 			});
 		});
@@ -208,6 +233,15 @@ $(function() {
 		$('.js-example-basic-single').select2();
 	});
 
+	// $(window).scroll(moveScroll);
+
+	$("#checkAll").click(function () {
+    	$(".check").prop('checked', $(this).prop('checked'));
+	});
+	
+	$(".sortable2 ul:nth-child(2) li").each(function(index) {
+  		console.log("trdt");
+	});
 
 	//$('.table tr').each(function(){
   		
@@ -260,12 +294,12 @@ $(function() {
 });
 </script>
 <script>
-  $(document).ready(function() {
+  // $(document).ready(function() {
 
-  	// $("#sortable1 , #sortable2 , #sortable3 , #sortable4 , #sortable5, #sortable6, #sortable7, #sortable7, #sortable8, #sortable9" ).sortable({
-   //  	connectWith: ".connectedSortable_ul_1",
-   //  	dropOnEmpty: true
-   //  }).disableSelection();
+  // $("#sortable1 , #sortable2 , #sortable3 , #sortable4 , #sortable5, #sortable6, #sortable7, #sortable7, #sortable8, #sortable9" ).sortable({
+  //  	connectWith: ".connectedSortable_ul_1",
+  //  	dropOnEmpty: true
+  //  }).disableSelection();
 
   //   var $tabs=$('#table-draggable2')
   //   $( "tbody.connectedSortable_table" )
@@ -290,18 +324,59 @@ $(function() {
   //   });
 
 
+// })
+// });
+
+/*
+
+function scrolify(tblAsJQueryObject, height) {
+  var oTbl = tblAsJQueryObject;
+
+  // for very large tables you can remove the four lines below
+  // and wrap the table with <div> in the mark-up and assign
+  // height and overflow property  
+  var oTblDiv = $("<div/>");
+  oTblDiv.css('height', height);
+  oTblDiv.css('overflow', 'scroll');
+  oTbl.wrap(oTblDiv);
+
+  // save original width
+  oTbl.attr("data-item-original-width", oTbl.width());
+  oTbl.find('thead tr td').each(function() {
+    $(this).attr("data-item-original-width", $(this).width());
+  });
+  oTbl.find('tbody tr:eq(0) td').each(function() {
+    $(this).attr("data-item-original-width", $(this).width());
+  });
 
 
-	$("#checkAll").click(function () {
-    	$(".check").prop('checked', $(this).prop('checked'));
-	});
-	
-	$(".sortable2 ul:nth-child(2) li").each(function(index) {
-  		console.log("trdt");
-	});
+  // clone the original table
+  var newTbl = oTbl.clone();
 
+  // remove table header from original table
+  oTbl.find('thead tr').remove();
+  // remove table body from new table
+  newTbl.find('tbody tr').remove();
 
+  oTbl.parent().parent().prepend(newTbl);
+  newTbl.wrap("<div/>");
+
+  // replace ORIGINAL COLUMN width				
+  newTbl.width(newTbl.attr('data-item-original-width'));
+  newTbl.find('thead tr td').each(function() {
+    $(this).width($(this).attr("data-item-original-width"));
+  });
+  oTbl.width(oTbl.attr('data-item-original-width'));
+  oTbl.find('tbody tr:eq(0) td').each(function() {
+    $(this).width($(this).attr("data-item-original-width"));
+  });
+}
+
+$(document).ready(function() {
+  scrolify($('#tblNeedsScrolling'), 160); // 160 is height
 });
+
+*/
 </script>
 </body>
 </html>

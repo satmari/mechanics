@@ -17,6 +17,7 @@ class CreateLocationsTable extends Migration {
 			$table->increments('id');
 			$table->string('location')->unique();
 			$table->integer('area_id');
+			$table->boolean('active')->default(1);
 			$table->timestamps();
 		});
 	}

@@ -46,6 +46,7 @@
 				           <th>Plant</th>
 				           <th>Area</th>
 				           <th>Location</th>
+				           <th>Active</th>
 				           <th></th>
 				        </tr>
 				    </thead>
@@ -58,6 +59,12 @@
 				        	<td>{{ $d->plant }}</td>
 				        	<td>{{ $d->area }}</td>
 				        	<td>{{ $d->location }}</td>
+				        	<td>@if ($d->active == 1) 
+				        			YES
+				        		@else
+				        			NO
+				        		@endif
+				        	</td>
 				        	<td>
 				        	@if(Auth::check())
 				        	  	<a href="{{ url('edit_location/'.$d->id) }}" class="btn btn-info btn-xs center-block">Edit</a>

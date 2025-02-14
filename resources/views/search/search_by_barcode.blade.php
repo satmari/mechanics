@@ -97,15 +97,78 @@
 							<td>Plant:</td>
 							<td><b>{{ $d->plant }}</b></td>
 						</tr>
-						<tr>
+						<!-- <tr>
 							<td>Remark Subotica:</td>
 							<td><b>{{ $d->remark_su }}</b></td>
 						</tr>
 						<tr>
 							<td>Remark Kikinda:</td>
 							<td><b>{{ $d->remark_ki }}</b></td>
+						</tr> -->
+						<hr>
+						<tr>
+							<td>Gauge:</td>
+							<td><b>
+								@if ($d->gauge == 0)
+								@else
+									{{ round($d->gauge,1) }}
+								@endif
+							</b></td>
 						</tr>
-						
+						<tr>
+							<td>Gadget:</td>
+							<td><b>{{ $d->gadget }}</b></td>
+						</tr>
+						<tr>
+							<td>Ten.Dev Small brand:</td>
+							<td><b>{{ $d->el_dev_small_brand }}</b></td>
+						</tr>
+						<tr>
+							<td>Ten.Dev Small quantity:</td>
+							<td><b>
+								@if ($d->el_dev_small_quantity == 0)
+								@else
+									{{ round($d->el_dev_small_quantity,0) }}
+								@endif
+							</b></td>
+						</tr>
+						<tr>
+							<td>Ten.Dev Big brand:</td>
+							<td><b>{{ $d->el_dev_big_brand }}</b></td>
+						</tr>
+						<tr>
+							<td>Ten.Dev Big quantity:</td>
+							<td><b>
+								@if ($d->el_dev_big_quantity == 0)
+								@else
+									{{ round($d->el_dev_big_quantity,0) }}
+								@endif
+							</b></td>
+						</tr>
+						<tr>
+							<td>Puller:</td>
+							<td><b>
+								@if ($d->puller==1) 
+									Yes
+								@else
+									No
+								@endif
+							</b></td>
+						</tr>
+						<tr>
+							<td>Rollers:</td>
+							<td><b>
+								@if ($d->rollers)
+									Yes
+								@else
+									No
+								@endif
+							</b></td>
+						</tr>
+						<tr>
+							<td>JUST_REMOVED status last info:</td>
+							<td>{{ $d->just_removed_info }}</td>
+						</tr>
 						@endforeach
 					</tbody>
 				</table>

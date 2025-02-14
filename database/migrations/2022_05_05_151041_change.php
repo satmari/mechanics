@@ -20,6 +20,18 @@ class Change extends Migration {
 
      		// $table->string('give_doc')->nullable();
      		// $table->string('return_doc')->nullable();
+
+   //   		$table->float('gauge')->default(0);
+			// $table->string('gadget')->nullable();
+			// $table->string('el_dev_small_brand')->nullable();
+			// $table->integer('el_dev_small_quantity')->default(0);
+			// $table->string('el_dev_big_brand')->nullable();
+			// $table->integer('el_dev_big_quantity')->default(0);
+			// $table->boolean('puller')->default(0);
+			// $table->boolean('rollers')->default(0);
+			// $table->mediumText('comment_ws')->nullable();
+
+			// $table->string('just_removed_info')->nullable();
 		 });
 
 		Schema::table('temp_give_machines', function($table)
@@ -43,6 +55,12 @@ class Change extends Migration {
 		 {
      		// $table->string('plant_from')->nullable();
 			// $table->string('plant_to')->nullable();
+		 });
+
+		Schema::table('locations', function($table)
+		 {
+     		
+			// $table->boolean('active')->default(1);
 		 });
 		
 			

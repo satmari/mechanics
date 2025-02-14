@@ -37,12 +37,6 @@ use Validator;
 
 class mechanicsController extends Controller {
 
-	// public function __construct()
-	// {
-	// 	$this->middleware('auth');
-	// 	// Session::set('leaderid', NULL);
-	// }
-
 	public function index() {
 		
 		// dd('test');
@@ -60,8 +54,7 @@ class mechanicsController extends Controller {
 			}
 		}
 		return view('Mechanics.login');
-		// return Redirect::to('afterlogin');
-
+		// return Redirect::to('afterlogin');class_table
 	}
 
 	public function logincheck(Request $request) {
@@ -123,9 +116,11 @@ class mechanicsController extends Controller {
 		$locations = DB::table('locations')
 		            ->join('areas', 'areas.id', '=', 'locations.area_id')
 		            ->join('plants', 'plants.id', '=', 'areas.plant_id')
+		            ->where('locations.active', '=', '1')
 		            ->where('areas.area', '=', 'STOCK_S')
 		            ->orWhere('areas.area', '=', 'STOCK_K')
 		            ->orWhere('areas.area', '=', 'STOCK_Z')
+		            
 		            ->select('locations.id', 'locations.location', 'areas.area', 'plants.plant')
 		            ->orderBy('plants.plant', 'desc')
 		            ->get();
@@ -143,6 +138,7 @@ class mechanicsController extends Controller {
 		$locations = DB::table('locations')
 		            ->join('areas', 'areas.id', '=', 'locations.area_id')
 		            ->join('plants', 'plants.id', '=', 'areas.plant_id')
+		            ->where('locations.active', '=', '1')
 		            ->where('areas.area', '=', 'STOCK_S')
 		            ->orWhere('areas.area', '=', 'STOCK_K')
 		            ->orWhere('areas.area', '=', 'STOCK_Z')
@@ -170,7 +166,7 @@ class mechanicsController extends Controller {
 			FROM locations as l
 			JOIN areas as a ON a.id = l.area_id
 			JOIN plants as p ON p.id = a.plant_id
-			WHERE l.location = '".$location_new."' "));
+			WHERE l.location = '".$location_new."' and l.active = 1 "));
 
 		} catch(\Illuminate\Database\QueryException $ex){ 
 			
@@ -179,6 +175,7 @@ class mechanicsController extends Controller {
 		            ->join('areas', 'areas.id', '=', 'locations.area_id')
 		            ->join('plants', 'plants.id', '=', 'areas.plant_id')
 		            ->where('locations.location', '=', $location_new)
+		            ->where('locations.active', '=', '1')
 		            ->select('locations.id', 'locations.location', 'areas.area', 'plants.plant')
 		            ->get();
 
@@ -260,7 +257,7 @@ class mechanicsController extends Controller {
 
 			$machine_temp = strtoupper($machine_temp);
 
-			if (strlen($machine_temp) == 7 OR strlen($machine_temp) == 8) {
+			if (strlen($machine_temp) == 7 OR strlen($machine_temp) == 8 OR strlen($machine_temp) == 9) {
 				// dd($machine_temp);
 
 				$exist = DB::table('machines')
@@ -269,7 +266,7 @@ class mechanicsController extends Controller {
 	            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
 	            ->where('machines.os', '=', $machine_temp)
 	            ->where('machines.machine_status', '!=', 'TO_REPAIR')
-	            ->select('machines.id', 'machines.os', 'machines.location', 'machines.brand', 'machines.type', 'machines.code', 'plants.plant')
+	            ->select('machines.id', 'machines.os', 'machines.location', 'machines.brand', 'machines.type', 'machines.code', 'machines.machine_status' ,'plants.plant')
 	            ->get();
 	            // dd($exist);
 			    
@@ -283,8 +280,16 @@ class mechanicsController extends Controller {
 							$data = DB::table('temp_move_machines')->where('ses', '=', $session)->get();
 							$msge = 'Machine already scaned';
 							return view('Mechanics.move_machine_in_plant_scan', compact('data','new_location_id', 'new_location', 'new_area', 'new_plant', 'session','machines','msge'));
-						}
+						} else {
 
+							if ($exist[0]->machine_status == 'IN_LINE') {
+							
+								$data = DB::table('temp_move_machines')->where('ses', '=', $session)->get();
+								$msge = 'Machine have status IN_LINE and it is on the line '.$exist[0]->location.' . Please logout machine first. ';
+								return view('Mechanics.move_machine_in_plant_scan', compact('data','new_location_id', 'new_location', 'new_area', 'new_plant', 'session','machines','msge'));
+							}
+
+						}
 					} else {
 
 						$data = DB::table('temp_move_machines')->where('ses', '=', $session)->get();
@@ -304,16 +309,18 @@ class mechanicsController extends Controller {
 			} else {
 
 				$data = DB::table('temp_move_machines')->where('ses', '=', $session)->get();
-				$msge = 'Machine barcode must have 7 or 8 characters';
+				$msge = 'Machine barcode must have 7 ,8 or 9 characters';
 
 				return view('Mechanics.move_machine_in_plant_scan', compact('data','new_location_id', 'new_location', 'new_area', 'new_plant', 'session','machines','msge'));
 			}
+		
 		} else {
 			// dd('Error, zovi IT.');
 			$data = DB::table('temp_move_machines')->where('ses', '=', $session)->get();
 			$msge = 'Please add machine or scan machine barcode';
 
 			return view('Mechanics.move_machine_in_plant_scan', compact('data','new_location_id', 'new_location', 'new_area', 'new_plant', 'session','machines','msge'));
+		
 		}
 		// dd('change');
 
@@ -482,11 +489,10 @@ class mechanicsController extends Controller {
 		DB::connection('sqlsrv')->delete(DB::raw("DELETE FROM temp_move_machines WHERE ses = '".$session."' "));
 
 		
-
-
 		$locations = DB::table('locations')
 		            ->join('areas', 'areas.id', '=', 'locations.area_id')
 		            ->join('plants', 'plants.id', '=', 'areas.plant_id')
+		            ->where('locations.active', '=', '1')
 		            ->select('locations.id', 'locations.location', 'areas.area', 'plants.plant')
 		            ->orderBy('plants.plant', 'desc')
 		            ->get();
@@ -506,6 +512,7 @@ class mechanicsController extends Controller {
 		$locations = DB::table('locations')
 		            ->join('areas', 'areas.id', '=', 'locations.area_id')
 		            ->join('plants', 'plants.id', '=', 'areas.plant_id')
+		            ->where('locations.active', '=', '1')
 		            ->where('areas.area', '=', 'STOCK_S')
 		            ->orWhere('areas.area', '=', 'STOCK_K')
 		            ->orWhere('areas.area', '=', 'STOCK_Z')
@@ -582,7 +589,7 @@ class mechanicsController extends Controller {
 
 	public function transfer_machine_scan(Request $request) {
 		//
-		$input = $request->all(); 
+		$input = $request->all();
 		// dd($input);
 		$session = Session::getId();
 		$data = DB::table('temp_transfer_machines')->where('ses', '=', $session)->get();
@@ -609,8 +616,10 @@ class mechanicsController extends Controller {
 
 		if (!empty($input['machine_temp1'])) {
 			$machine_temp = $input['machine_temp1'];
+
 		} elseif (!empty($input['machine_temp2'])) {
 			$machine_temp = $input['machine_temp2'];
+
 		} else {
 			// dd('problem');
 			$plant_from = strtoupper($input['plant_from']);
@@ -643,7 +652,7 @@ class mechanicsController extends Controller {
 			            ->select('machines.id', 'machines.os', 'machines.location', 'machines.brand', 'machines.type', 'machines.code', 'plants.plant')
 			            ->get();
 
-			if (strlen($machine_temp) == 7 OR strlen($machine_temp) == 8) {
+			if (strlen($machine_temp) == 7 OR strlen($machine_temp) == 8 OR strlen($machine_temp) == 9) {
 				// dd($machine_temp);
 
 				$exist = DB::table('machines')
@@ -651,7 +660,7 @@ class mechanicsController extends Controller {
 	            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
 	            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
 	            ->where('machines.os', '=', $machine_temp)
-	            ->select('machines.id', 'machines.os', 'machines.location','machines.brand','machines.type','machines.code', 'plants.plant')
+	            ->select('machines.id', 'machines.os', 'machines.location','machines.brand','machines.type','machines.code','machines.machine_status','plants.plant')
 	            ->get();
 	            // dd($exist);
 				
@@ -662,14 +671,21 @@ class mechanicsController extends Controller {
 
 						$data_temp = DB::connection('sqlsrv')->select(DB::raw("SELECT os, ses FROM temp_transfer_machines WHERE os = '".$exist[0]->os."' AND ses = '".$session."' "));
 						if (isset($data_temp[0]->os)) {
-							
+							//							
 							$data = DB::table('temp_transfer_machines')->where('ses', '=', $session)->get();
 							$msge = 'Machine already scaned';
 							return view('Mechanics.transfer_machine_scan', compact('data','plant_from','plant_to','transfer_doc','session','machines','msge'));
+						} else {
+
+							if ($exist[0]->machine_status == 'IN_LINE') {
+							
+								$data = DB::table('temp_transfer_machines')->where('ses', '=', $session)->get();
+								$msge = 'Machine have status IN_LINE and it is on the line '.$exist[0]->location.' . Please logout machine first. ';
+								return view('Mechanics.transfer_machine_scan', compact('data','plant_from','plant_to','transfer_doc','session','machines','msge'));
+							}
 						}
 					} else {
 
-						
 						$data = DB::table('temp_transfer_machines')->where('ses', '=', $session)->get();
 						if ($exist[0]->plant == NULL) {
 							$exist[0]->plant = 'NOT DEFINED';
@@ -686,7 +702,7 @@ class mechanicsController extends Controller {
 			} else {
 				
 				$data = DB::table('temp_transfer_machines')->where('ses', '=', $session)->get();
-				$msge = 'Machine barcode must have 7 or 8 characters';
+				$msge = 'Machine barcode must have 7, 8 or 9 characters';
 				return view('Mechanics.transfer_machine_scan', compact('data','plant_from','plant_to','transfer_doc','session','machines','msge'));
 			}
 		} else {
@@ -822,8 +838,6 @@ class mechanicsController extends Controller {
 
 				/* turn on and off in inteos */
 				if (($plant_from == 'SUBOTICA') OR ($plant_from == 'SENTA')) {
-
-
 					if (($plant_to == 'SUBOTICA') OR ($plant_to == 'SENTA')) {
 
 						
@@ -878,6 +892,7 @@ class mechanicsController extends Controller {
 		$locations = DB::table('locations')
 		            ->join('areas', 'areas.id', '=', 'locations.area_id')
 		            ->join('plants', 'plants.id', '=', 'areas.plant_id')
+		            ->where('locations.active', '=', '1')
 		            ->select('locations.id', 'locations.location', 'areas.area', 'plants.plant')
 		            ->orderBy('plants.plant', 'desc')
 		            ->get();
@@ -912,14 +927,13 @@ class mechanicsController extends Controller {
 		  JOIN [mechanics].[dbo].[plants] as p ON p.id = a.plant_id
 		  LEFT JOIN [mechanics].[dbo].[machines] as m ON m.location = l.location
 
-		WHERE p.plant = 'EXTERNAL'
+		WHERE p.plant = 'EXTERNAL' and l.active = 1
 		GROUP BY l.location, l.id, a.area, p.plant"));
 		// dd($external_locations);
 
 
 		return view('Mechanics.give_machine', compact('session','external_locations'));
 	}
-
 
 	public function give_machine_to(Request $request) {
 		//
@@ -965,7 +979,6 @@ class mechanicsController extends Controller {
 		}
 		
 		// dd($machine_temp);
-
 		$machines = DB::table('machines')
 			            ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
 			            ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
@@ -973,11 +986,11 @@ class mechanicsController extends Controller {
 			            ->where('locations.location', '!=', $give_machine_to)
 			            ->select('machines.id', 'machines.os', 'machines.location', 'machines.brand', 'machines.type', 'machines.code', 'plants.plant')
 			            ->get();
+
 		$data = DB::table('temp_give_machines')->where('ses', '=', $session)->get();
 
 		if (!empty($input['machine_temp1'])) {
 			$machine_temp = strtoupper($input['machine_temp1']);
-
 		} elseif (!empty($input['machine_temp2'])) {
 			$machine_temp = strtoupper($input['machine_temp2']);
 		} else {
@@ -995,7 +1008,7 @@ class mechanicsController extends Controller {
 
 		if (isset($machine_temp)) {
 			
-			if (strlen($machine_temp) == 7 OR strlen($machine_temp) == 8) {
+			if (strlen($machine_temp) == 7 OR strlen($machine_temp) == 8 OR strlen($machine_temp) == 9) {
 				// dd($machine_temp);
 
 				$exist = DB::table('machines')
@@ -1016,7 +1029,6 @@ class mechanicsController extends Controller {
 						$msge = 'Machine already scaned';
 						return view('Mechanics.give_machine_scan', compact('data','give_machine_to','give_doc','session','machines','msge'));
 					}
-
 				} else {
 					
 					$data = DB::table('temp_give_machines')->where('ses', '=', $session)->get();
@@ -1026,7 +1038,7 @@ class mechanicsController extends Controller {
 			} else {
 				
 				$data = DB::table('temp_give_machines')->where('ses', '=', $session)->get();
-				$msge = 'Machine barcode must have 7 or 8 characters';
+				$msge = 'Machine barcode must have 7 ,8 or 9 characters';
 				return view('Mechanics.give_machine_scan', compact('data','give_machine_to','give_doc','session','machines','msge'));
 			}
 		} else {
@@ -1048,7 +1060,6 @@ class mechanicsController extends Controller {
 		$data = DB::table('temp_give_machines')->where('ses', '=', $session)->get();
 		$msg = 'Machine '.$machine_temp.' added to the list';
 		return view('Mechanics.give_machine_scan', compact('data','give_machine_to','give_doc','session','machines','msg'));
-
 	}
 
 	public function give_machine_remove($id, $session) {
@@ -1096,6 +1107,7 @@ class mechanicsController extends Controller {
 		// $new_location_id = NULL;
 		$new_location_id = DB::table('locations')
 			            ->where('locations.location', '=', $give_machine_to)
+			            ->where('locations.active', '=', '1')
 			            ->select('locations.id')
 			            ->get();
 	    // dd($new_location_id[0]->id);
@@ -1144,7 +1156,7 @@ class mechanicsController extends Controller {
 		  JOIN [mechanics].[dbo].[plants] as p ON p.id = a.plant_id
 		  LEFT JOIN [mechanics].[dbo].[machines] as m ON m.location = l.location
 
-		WHERE p.plant = 'EXTERNAL'
+		WHERE p.plant = 'EXTERNAL' and l.active = 1
 		GROUP BY l.location, l.id, a.area, p.plant"));
 		return view('Mechanics.give_machine', compact('msgs','session','external_locations'));
 	}
@@ -1167,7 +1179,7 @@ class mechanicsController extends Controller {
 		  JOIN [mechanics].[dbo].[plants] as p ON p.id = a.plant_id
 		  LEFT JOIN [mechanics].[dbo].[machines] as m ON m.location = l.location
 
-		WHERE p.plant = 'EXTERNAL'
+		WHERE p.plant = 'EXTERNAL' and l.active = 1
 		GROUP BY l.location, l.id, a.area, p.plant"));
 
 		$msgs = 'Successfully canceled';
@@ -1190,12 +1202,11 @@ class mechanicsController extends Controller {
 		  JOIN [mechanics].[dbo].[plants] as p ON p.id = a.plant_id
 		  LEFT JOIN [mechanics].[dbo].[machines] as m ON m.location = l.location
 
-		WHERE p.plant = 'EXTERNAL'
+		WHERE p.plant = 'EXTERNAL' and l.active = 1
 		GROUP BY l.location, l.id, a.area, p.plant"));
 
 		return view('Mechanics.return_machine', compact('session','external_locations'));
 	}
-
 
 	public function return_machine_to(Request $request) {
 		//
@@ -1273,7 +1284,7 @@ class mechanicsController extends Controller {
 		if (isset($machine_temp)) {
 			$machine_temp = strtoupper($machine_temp);
 			
-			if (strlen($machine_temp) == 7 OR strlen($machine_temp) == 8) {
+			if (strlen($machine_temp) == 7 OR strlen($machine_temp) == 8 OR strlen($machine_temp) == 9) {
 				// dd($machine_temp);
 
 				$exist = DB::table('machines')
@@ -1304,7 +1315,7 @@ class mechanicsController extends Controller {
 			} else {
 				
 				$data = DB::table('temp_return_machines')->where('ses', '=', $session)->get();
-				$msge = 'Machine barcode must have 7 or 8 characters';
+				$msge = 'Machine barcode must have 7 ,8 or 9 characters';
 				return view('Mechanics.return_machine_scan', compact('data','return_machine_to','return_doc','session','machines','msge'));
 			}
 		} else {
@@ -1326,7 +1337,6 @@ class mechanicsController extends Controller {
 		$data = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM temp_return_machines WHERE ses = '".$session."' order by id desc"));
 		$msg = 'Machine added to the list';
 		return view('Mechanics.return_machine_scan', compact('data','return_machine_to','return_doc','session','machines','msg'));
-
 	}
 
 	public function return_machine_remove($id, $session) {
@@ -1375,6 +1385,7 @@ class mechanicsController extends Controller {
 		$new_location = 'RECEIVING_SU';
 		$new_location_id = DB::table('locations')
 			            ->where('locations.location', '=', $new_location)
+			            ->where('locations.active', '=', '1')
 			            ->select('locations.id')
 			            ->get();
 		// dd($new_location_id);
@@ -1427,7 +1438,7 @@ class mechanicsController extends Controller {
 		  JOIN [mechanics].[dbo].[plants] as p ON p.id = a.plant_id
 		  LEFT JOIN [mechanics].[dbo].[machines] as m ON m.location = l.location
 
-		WHERE p.plant = 'EXTERNAL'
+		WHERE p.plant = 'EXTERNAL' and l.active = 1
 		GROUP BY l.location, l.id, a.area, p.plant"));
 		return view('Mechanics.return_machine', compact('msgs','session','external_locations'));
 	}
@@ -1450,7 +1461,7 @@ class mechanicsController extends Controller {
 		  JOIN [mechanics].[dbo].[plants] as p ON p.id = a.plant_id
 		  LEFT JOIN [mechanics].[dbo].[machines] as m ON m.location = l.location
 
-		WHERE p.plant = 'EXTERNAL'
+		WHERE p.plant = 'EXTERNAL' and l.active = 1
 		GROUP BY l.location, l.id, a.area, p.plant"));
 
 		$msgs = 'Successfully canceled';
@@ -1476,7 +1487,6 @@ class mechanicsController extends Controller {
 		$session = Session::getId();
 		return view('Mechanics.adjust_machine', compact('session'));
 	}
-
 
 	public function adjust_machine_to(Request $request) {
 		//
@@ -1540,7 +1550,7 @@ class mechanicsController extends Controller {
 
 		if (isset($machine_temp)) {
 			
-			if (strlen($machine_temp) == 7 OR strlen($machine_temp) == 8) {
+			if (strlen($machine_temp) == 7 OR strlen($machine_temp) == 8 OR strlen($machine_temp) == 9) {
 				// dd($machine_temp);
 
 				$exist = DB::table('machines')
@@ -1582,7 +1592,7 @@ class mechanicsController extends Controller {
 			} else {
 				
 				$data = DB::table('temp_adjust_machines')->where('ses', '=', $session)->get();
-				$msge = 'Machine barcode must have 7 or 8 characters';
+				$msge = 'Machine barcode must have 7 ,8 or 9 characters';
 				return view('Mechanics.adjust_machine_scan', compact('data','adjust_machine_to','session','machines','msge'));
 			}
 		} else {
@@ -1603,7 +1613,6 @@ class mechanicsController extends Controller {
 		$data = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM temp_adjust_machines WHERE ses = '".$session."' order by id desc"));
 		$msg = 'Machine added '.$machine_temp.' to the list';
 		return view('Mechanics.adjust_machine_scan', compact('data','adjust_machine_to','session','machines','msg'));
-
 	}
 
 	public function adjust_machine_remove($id, $session) {
@@ -1661,6 +1670,7 @@ class mechanicsController extends Controller {
 			$new_location = 'REPAIRING_SU';
 			$new_location_id = DB::table('locations')
 			            ->where('locations.location', '=', $new_location)
+			            ->where('locations.active', '=', '1')
 			            ->select('locations.id')
 			            ->get();
 	    	// dd($new_location_id[0]->id);
@@ -1671,6 +1681,7 @@ class mechanicsController extends Controller {
 			$new_location = 'REPAIRING_KI';
 			$new_location_id = DB::table('locations')
 			            ->where('locations.location', '=', $new_location)
+			            ->where('locations.active', '=', '1')
 			            ->select('locations.id')
 			            ->get();
 	    	// dd($new_location_id[0]->id);
@@ -1681,6 +1692,7 @@ class mechanicsController extends Controller {
 			$new_location = 'REPAIRING_SE';
 			$new_location_id = DB::table('locations')
 			            ->where('locations.location', '=', $new_location)
+			            ->where('locations.active', '=', '1')
 			            ->select('locations.id')
 			            ->get();
 	    	// dd($new_location_id[0]->id);
@@ -1729,7 +1741,6 @@ class mechanicsController extends Controller {
 		$session = Session::getId();
 		return view('Mechanics.fix_machine', compact('session'));
 	}
-
 
 	public function fix_machine_to(Request $request) {
 		//
@@ -1792,7 +1803,7 @@ class mechanicsController extends Controller {
 
 		if (isset($machine_temp)) {
 			
-			if (strlen($machine_temp) == 7 OR strlen($machine_temp) == 8) {
+			if (strlen($machine_temp) == 7 OR strlen($machine_temp) == 8 OR strlen($machine_temp) == 9) {
 				// dd($machine_temp);
 
 				$exist = DB::table('machines')
@@ -1832,7 +1843,7 @@ class mechanicsController extends Controller {
 			} else {
 				
 				$data = DB::table('temp_fix_machines')->where('ses', '=', $session)->get();
-				$msge = 'Machine barcode must have 7 or 8 characters';
+				$msge = 'Machine barcode must have 7 ,8 or 9 characters';
 				return view('Mechanics.fix_machine_scan', compact('data','fix_machine_to','session','machines','msge'));
 			}
 		} else {
@@ -1853,7 +1864,6 @@ class mechanicsController extends Controller {
 		$data = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM temp_fix_machines WHERE ses = '".$session."' order by id desc"));
 		$msg = 'Machine '.$machine_temp.' added to the list';
 		return view('Mechanics.fix_machine_scan', compact('data','fix_machine_to','session','machines','msg'));
-
 	}
 
 	public function fix_machine_remove($id, $session) {
@@ -1905,6 +1915,7 @@ class mechanicsController extends Controller {
 			            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
 			            ->where('plants.plant', '=', 'SUBOTICA')
 			            ->where('areas.area', '=', 'STOCK_S')
+			            ->where('locations.active', '=', '1')
 			            ->get();
 		    $plant = 'SUBOTICA';
 		    $area = 'STOCK_S';
@@ -1916,6 +1927,7 @@ class mechanicsController extends Controller {
 			            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
 			            ->where('plants.plant', '=', 'KIKINDA')
 			            ->where('areas.area', '=', 'STOCK_K')
+			            ->where('locations.active', '=', '1')
 			            ->get();
   			$plant = 'KIKINDA';
   			$area = 'STOCK_K';
@@ -1927,6 +1939,7 @@ class mechanicsController extends Controller {
 			            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
 			            ->where('plants.plant', '=', 'SENTA')
 			            ->where('areas.area', '=', 'STOCK_Z')
+			            ->where('locations.active', '=', '1')
 			            ->get();
 			$plant = 'SENTA';
 			$area = 'STOCK_Z';
@@ -1961,6 +1974,7 @@ class mechanicsController extends Controller {
 			            ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
 			            ->where('plants.plant', '=', $plant)
 			            ->where('areas.area', '=', $area)
+			            ->where('locations.active', '=', '1')
 			            ->get();
 			$msge = 'Please scan or select location';
 			return view('Mechanics.fix_machine_destination', compact('session','new_locations','plant','area','msge'));
@@ -1968,6 +1982,7 @@ class mechanicsController extends Controller {
 
 		$new_location_id = DB::table('locations')
 			            ->where('location', '=', $location)
+			            ->where('locations.active', '=', '1')
 			            ->get();
 		// dd($new_location_id[0]->id);
 
@@ -1990,7 +2005,6 @@ class mechanicsController extends Controller {
 	
 		$msgs = 'Successfully saved';
 		return view('Mechanics.fix_machine', compact('msgs','session'));
-
 	}
 
 	public function fix_machine_cancel($session) {
@@ -2018,8 +2032,6 @@ class mechanicsController extends Controller {
 
 		return view('Mechanics.disable_machine', compact('writeoff','sold','session'));	
 	}
-
-// WRITEOFF MACHINE
 
 	public function writeoff_machine_scan(Request $request) {
 		//
@@ -2072,7 +2084,7 @@ class mechanicsController extends Controller {
 
 		if (isset($machine_temp)) {
 			
-			if (strlen($machine_temp) == 7 OR strlen($machine_temp) == 8) {
+			if (strlen($machine_temp) == 7 OR strlen($machine_temp) == 8 OR strlen($machine_temp) == 9) {
 				// dd($machine_temp);
 
 				$exist = DB::table('machines')
@@ -2102,7 +2114,7 @@ class mechanicsController extends Controller {
 			} else {
 				
 				$data = DB::table('temp_writeoff_machines')->where('ses', '=', $session)->get();
-				$msge = 'Machine barcode must have 7 or 8 characters';
+				$msge = 'Machine barcode must have 7 ,8 or 9 characters';
 				return view('Mechanics.writeoff_machine_scan', compact('data','reason','session','machines','msge'));
 			}
 		} else {
@@ -2123,7 +2135,6 @@ class mechanicsController extends Controller {
 		$data = DB::table('temp_writeoff_machines')->where('ses', '=', $session)->get();
 		$msg = 'Machine '.$machine_temp.' added to the list';
 		return view('Mechanics.writeoff_machine_scan', compact('data','reason','session','machines','msg'));
-		
 	}
 
 	public function writeoff_machine_remove($id, $session) {
@@ -2178,8 +2189,13 @@ class mechanicsController extends Controller {
 			// } catch(\Illuminate\Database\QueryException $ex){
 			// 	dd('problem to save');
 			// }
+			DB::connection('sqlsrv2')->update(DB::raw("UPDATE [BdkCLZG].[dbo].[CNF_MachPool] SET [NotAct] = 1 WHERE [MachNum] = '".$os."' "));	
+			DB::connection('sqlsrv2')->update(DB::raw("UPDATE [172.27.161.221\INTEOSKKA].[BdkCLZKKA].[dbo].[CNF_MachPool] SET [NotAct] = 1 WHERE [MachNum] = '".$os."' "));	
+
 		}
 		DB::connection('sqlsrv')->delete(DB::raw("DELETE FROM temp_writeoff_machines WHERE ses = '".$session."' "));
+
+
 		
 		$msgs = 'Successfully saved';
 		// return view('Mechanics.writeoff_machine', compact('msgs','session'));
@@ -2213,8 +2229,6 @@ class mechanicsController extends Controller {
 
 		return view('Mechanics.disable_machine', compact('writeoff','sold','session','msgs'));
 	}	
-
-// SELL MACHINE
 
 	public function sell_machine() {
 
@@ -2296,7 +2310,7 @@ class mechanicsController extends Controller {
 
 		if (isset($machine_temp)) {
 			
-			if (strlen($machine_temp) == 7 OR strlen($machine_temp) == 8) {
+			if (strlen($machine_temp) == 7 OR strlen($machine_temp) == 8 OR strlen($machine_temp) == 9) {
 				// dd($machine_temp);
 
 				$exist = DB::table('machines')
@@ -2326,7 +2340,7 @@ class mechanicsController extends Controller {
 			} else {
 				
 				$data = DB::table('temp_sell_machines')->where('ses', '=', $session)->get();
-				$msge = 'Machine barcode must have 7 or 8 characters';
+				$msge = 'Machine barcode must have 7 ,8 or 9 characters';
 				return view('Mechanics.sell_machine_scan', compact('data','buyer','session','machines','msge'));
 			}
 		} else {
@@ -2401,6 +2415,8 @@ class mechanicsController extends Controller {
 			// } catch(\Illuminate\Database\QueryException $ex){
 			// 	dd('problem to save');
 			// }
+			DB::connection('sqlsrv2')->update(DB::raw("UPDATE [BdkCLZG].[dbo].[CNF_MachPool] SET [NotAct] = 1 WHERE [MachNum] = '".$os."' "));	
+			DB::connection('sqlsrv2')->update(DB::raw("UPDATE [172.27.161.221\INTEOSKKA].[BdkCLZKKA].[dbo].[CNF_MachPool] SET [NotAct] = 1 WHERE [MachNum] = '".$os."' "));	
 		}
 		DB::connection('sqlsrv')->delete(DB::raw("DELETE FROM temp_sell_machines WHERE ses = '".$session."' "));
 		
@@ -2482,7 +2498,7 @@ class mechanicsController extends Controller {
 
 		if (isset($machine_temp)) {
 			
-			if (strlen($machine_temp) == 7 OR strlen($machine_temp) == 8) {
+			if (strlen($machine_temp) == 7 OR strlen($machine_temp) == 8 OR strlen($machine_temp) == 9) {
 				// dd($machine_temp);
 
 				$exist = DB::table('machines')
@@ -2504,7 +2520,7 @@ class mechanicsController extends Controller {
 				}
 			} else {
 				
-				$msge = 'Machine barcode must have 7 or 8 characters';
+				$msge = 'Machine barcode must have 7 ,8 or 9 characters';
 				return view('Search.search_by_barcode', compact('machines','msge'));
 			}
 		} else {
@@ -2680,6 +2696,161 @@ class mechanicsController extends Controller {
 		return view('Search.search_by_location', compact('data','locations'));
 	}
 
+// ADVANCED SEARCH
+	public function advanced_search() {
+
+		$statuses = DB::connection('sqlsrv')->select(DB::raw("SELECT DISTINCT machine_status FROM machines order by machine_status asc"));
+		$locations = DB::connection('sqlsrv')->select(DB::raw("SELECT DISTINCT location FROM machines order by location asc"));
+		
+		$plants = DB::connection('sqlsrv')->select(DB::raw("SELECT DISTINCT plant FROM plants order by plant asc"));
+		$areas = DB::connection('sqlsrv')->select(DB::raw("SELECT DISTINCT area  FROM areas order by area asc"));
+		// dd($statuses);
+		return view('Search.advanced_search', compact('statuses','locations','plants','areas'));	
+	}
+
+	public function advanced_search_post(Request $request) {
+		//
+		$input = $request->all(); 
+		// $session = Session::getId();
+		// dd($input);
+		$os = $input['os'];
+		$brand = $input['brand'];
+		$code = $input['code'];
+		$type = $input['type'];
+		$location = $input['location'];
+		$machine_status = $input['machine_status'];
+		$gauge = $input['gauge'];
+		$gadget = $input['gadget'];
+		$el_dev_small_brand = $input['el_dev_small_brand'];
+		$el_dev_big_brand = $input['el_dev_big_brand'];
+		$puller = $input['puller'];
+		$rollers = $input['rollers'];
+		$plant = $input['plant'];
+		$area = $input['area'];
+
+		$query = '';
+		
+		if ($os != '') {
+			$query = "os like '%".$os."%' ";
+		}
+		if ($brand != '') {
+			if ($query == '') {
+				$query = "brand like '%".$brand."%' ";
+			} else {
+				$query = $query ." and brand like '%".$brand."%' ";
+			}
+		}
+		if ($code != '') {
+			if ($query == '') {
+				$query = "code like '%".$code."%' ";
+			} else {
+				$query = $query ." and code like '%".$code."%' ";
+			}
+		}
+		if ($type != '') {
+			if ($query == '') {
+				$query = "type like '%".$type."%' ";
+			} else {
+				$query = $query ." and type like '%".$type."%' ";
+			}
+		}
+		if ($plant != '') {
+			if ($query == '') {
+				$query = "plant like '%".$plant."%' ";
+			} else {
+				$query = $query ." and plant like '%".$plant."%' ";
+			}
+		}
+		if ($area != '') {
+			if ($query == '') {
+				$query = "area like '%".$area."%' ";
+			} else {
+				$query = $query ." and area like '%".$area."%' ";
+			}
+		}
+		if ($location != '') {
+			if ($query == '') {
+				$query = "m.location like '%".$location."%' ";
+			} else {
+				$query = $query ." and m.location like '%".$location."%' ";
+			}
+		}
+		if ($machine_status != '') {
+			if ($query == '') {
+				$query = "machine_status like '%".$machine_status."%' ";
+			} else {
+				$query = $query ." and machine_status like '%".$machine_status."%' ";
+			}
+		}
+		if ($gauge != '') {
+			if ($query == '') {
+				$query = "gauge like '%".$gauge."%' ";
+			} else {
+				$query = $query ." and gauge like '%".$gauge."%' ";
+			}
+		}
+		if ($gadget != '') {
+			if ($query == '') {
+				$query = "gadget like '%".$gadget."%' ";
+			} else {
+				$query = $query ." and gadget like '%".$gadget."%' ";
+			}
+		}
+		if ($el_dev_small_brand != '') {
+			if ($query == '') {
+				$query = "el_dev_small_brand like '%".$el_dev_small_brand."%' ";
+			} else {
+				$query = $query ." and el_dev_small_brand like '%".$el_dev_small_brand."%' ";
+			}
+		}
+		if ($el_dev_big_brand != '') {
+			if ($query == '') {
+				$query = "el_dev_big_brand like '%".$el_dev_big_brand."%' ";
+			} else {
+				$query = $query ." and el_dev_big_brand like '%".$el_dev_big_brand."%' ";
+			}
+		}
+		if ($puller != '') {
+			if ($query == '') {
+				$query = "puller like '%".$puller."%' ";
+			} else {
+				$query = $query ." and puller like '%".$puller."%' ";
+			}
+		}
+		if ($rollers != '') {
+			if ($query == '') {
+				$query = "rollers like '%".$rollers."%' ";
+			} else {
+				$query = $query ." and rollers like '%".$rollers."%' ";
+			}
+		}
+
+		if ($query == '') {
+			$query = "os like '%' ";
+		}
+
+		$search = DB::connection('sqlsrv')->select(DB::raw("SELECT *
+				,(SELECT convert(varchar, c.[created_at], 105)+' ' +c.[comment] + ' \n '
+					FROM [mechanics].[dbo].[comments] as c
+					WHERE c.os =  m.os
+					FOR XML PATH('') ) as comment
+				,p.plant
+				,a.area
+
+			  	FROM [mechanics].[dbo].[machines] as m
+			  	LEFT JOIN [mechanics].[dbo].locations as l ON l.id = m.location_id
+			  	LEFT JOIN [mechanics].[dbo].areas as a ON a.id = l.area_id
+			  	LEFT JOIN [mechanics].[dbo].plants as p ON p.id = a.plant_id
+			WHERE
+			".$query."
+			ORDER BY os asc
+			"));
+
+		// dd($search);
+		$data = $search;
+		return view('Search.advanced_search_table', compact('data','query'));	
+	}
+
 // ADD COMMENT
 
 	public function add_comment() {
@@ -2723,7 +2894,6 @@ class mechanicsController extends Controller {
 				$msge = 'Please scan or choose machine';
 				return view('Mechanics.add_comment', compact('machines','msge'));
 
-
 		}
 
 		$data2 = DB::table('machines')
@@ -2749,7 +2919,6 @@ class mechanicsController extends Controller {
 
 		$comments = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM comments WHERE os = '".$machine."' order by id desc"));
 		return view('Mechanics.add_comment_post', compact('machine','brand','type','code','location','area','plant','machine_status','remark_su','remark_ki','comments'));
-
 	}
 
 	public function delete_comment_post($id) {
@@ -2821,6 +2990,365 @@ class mechanicsController extends Controller {
 		$comments = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM comments WHERE os = '".$machine."' order by id desc"));
 		$msgs = 'Successfully saved';
 		return view('Mechanics.add_comment_post', compact('machine','brand','type','code','location','area','plant','machine_status','remark_su','remark_ki','comments','msgs'));
-
 	}
+
+// MACHINE EDIT (test)
+	public function machine_edit($machine_id) {
+
+		// dd($machine_id);
+		$data = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM machines WHERE id = '".$machine_id."' "));
+		// dd($machine[0]->code);
+		$machineCode = $data[0]->code;
+		// var_dump($machineCode);
+
+		$gadget_validations = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM gadget_validations "));
+		$el_dev_validations = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM el_dev_validations "));
+		$gauge_validations =  DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM gauge_validations WHERE type = '".$machineCode."' "));
+		// dd($gauge_validations);
+
+		return view('Mechanics.machine_edit', compact('data','gadget_validations','el_dev_validations','gauge_validations'));
+	}
+
+	public function machine_edit_post(Request  $request) {
+		//
+		$input = $request->all(); 
+		// $session = Session::getId();
+		dd($input);
+	}
+
+// ADD GADGET
+	public function add_info() {
+
+		$machines = DB::connection('sqlsrv')->select(DB::raw("SELECT os, brand, type, code FROM machines order by id"));
+		return view('Mechanics.add_info', compact('machines'));
+	}
+
+	public function add_info_scan(Request $request) {
+		//
+		$input = $request->all(); 
+		// $session = Session::getId();
+		// dd($input);
+
+		if (!empty($input['machine1'])) {
+
+			$test = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM machines
+			WHERE os = '".strtoupper($input['machine1'])."' "));
+			// dd($test);
+
+			if (empty($test)) {
+				$machines = DB::connection('sqlsrv')->select(DB::raw("SELECT os, brand, type, code FROM machines order by id"));
+				$msge = 'Machine doesnt exist';
+				return view('Mechanics.add_info', compact('machines','msge'));
+			}
+
+			$machine = strtoupper($input['machine1']);
+
+		} elseif (!empty($input['machine3'])) {
+
+			$machine = $input['machine3'];	
+		} else {
+
+			$machines = DB::connection('sqlsrv')->select(DB::raw("SELECT os, brand, type, code FROM machines order by id"));
+			$msge = 'Please scan or choose machine';
+			return view('Mechanics.add_info', compact('machines','msge'));
+		}
+
+		$data2 = DB::table('machines')
+        ->leftjoin('locations', 'locations.id', '=', 'machines.location_id')
+        ->leftjoin('areas', 'areas.id', '=', 'locations.area_id')
+        ->leftjoin('plants', 'plants.id', '=', 'areas.plant_id')
+        ->where('machines.os', '=', $machine)
+        ->get();
+        // dd($data2);
+
+        if (isset($data2)) {
+        	
+        	$brand = $data2[0]->brand;
+        	$type = $data2[0]->type;
+        	$code = $data2[0]->code;
+        	$location = $data2[0]->location;
+        	$area = $data2[0]->area;
+        	$plant = $data2[0]->plant;
+        	$machine_status = $data2[0]->machine_status;
+        	$remark_su = $data2[0]->remark_su;
+        	$remark_ki = $data2[0]->remark_ki;
+        	$gauge = (float)$data2[0]->gauge;
+        	$gadget = $data2[0]->gadget;
+        	$el_dev_small_brand = $data2[0]->el_dev_small_brand;
+        	$el_dev_small_quantity = (int)$data2[0]->el_dev_small_quantity;
+        	$el_dev_big_brand = $data2[0]->el_dev_big_brand;
+        	$el_dev_big_quantity = (int)$data2[0]->el_dev_big_quantity;
+        	$puller = $data2[0]->puller;
+        	$rollers = $data2[0]->rollers;
+
+        } else {
+        	dd('Error');
+        }
+
+		$gauge_validation =   DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM gauge_validations WHERE type = '".$data2[0]->code."' order by id desc"));
+		$gadget_validation = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM gadget_validations order by id desc"));
+		$el_dev_validation = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM el_dev_validations order by id desc"));
+		
+		return view('Mechanics.add_info_post', compact('machine','brand','type','code',
+			'location','area','plant','machine_status','remark_su','remark_ki',
+			'gauge_validation','gadget_validation','el_dev_validation','gauge','gadget',
+			'el_dev_small_brand','el_dev_small_quantity','el_dev_big_brand','el_dev_big_quantity',
+			'puller','rollers'));
+	}
+
+	public function add_info_post(Request $request) {
+		//
+		$input = $request->all(); 
+		// $session = Session::getId();
+		// dd($input);
+
+		$machine = $input['machine'];
+
+		if (isset($input['gauge'])) {
+			if ($input['gauge'] != '') {
+				$gauge = round((float)$input['gauge'],1);
+			} else {
+				$gauge = 0;
+			}
+		} else {
+			$gauge = 0;
+		}
+		// dd($gauge);
+		
+		if (isset($input['gadget'])) {
+			if ($input['gadget'] != '') {
+				$gadget = $input['gadget'];
+			} else {
+				$gadget = NULL;
+			}
+		} else {
+			$gadget = NULL;
+		}
+		// dd($gadget);
+
+		if (isset($input['el_dev_small_brand'])) {
+			
+			if ($input['el_dev_small_brand'] != '') {
+				$el_dev_small_brand = $input['el_dev_small_brand'];	
+
+				if (isset($input['el_dev_small_quantity'])) {
+
+					if ((int)$input['el_dev_small_quantity'] != 0) {
+						$el_dev_small_quantity = (int)$input['el_dev_small_quantity'];	
+					} else {
+						dd('error, missing el_dev_small_quantity');	
+					}
+					
+				} else {
+					dd('error, missing el_dev_small_quantity');
+				}
+			} else {
+				$el_dev_small_brand = NULL;
+				$el_dev_small_quantity = 0;
+			}
+		} else {
+			$el_dev_small_brand = NULL;
+			$el_dev_small_quantity = 0;
+		}
+		// dd($el_dev_small_brand);
+		// dd($el_dev_small_quantity);
+
+		if (isset($input['el_dev_big_brand'])) {
+
+			if ($input['el_dev_big_brand'] != '') {
+				$el_dev_big_brand = $input['el_dev_big_brand'];
+
+				if (isset($input['el_dev_big_quantity'])) {
+
+					if ((int)$input['el_dev_big_quantity']) {
+						$el_dev_big_quantity = (int)$input['el_dev_big_quantity'];	
+					} else {
+						dd('error, missing el_dev_big_quantity');	
+					}
+					
+				} else {
+					dd('error, missing el_dev_big_quantity');
+				}
+			} else {
+				$el_dev_big_brand = NULL;
+				$el_dev_big_quantity = 0;
+			}
+		} else {
+			$el_dev_big_brand = NULL;
+			$el_dev_big_quantity = 0;
+		}
+		// dd($el_dev_big_brand);
+		// dd($el_dev_big_quantity);
+
+		if (isset($input['puller']))
+			$puller = 1;
+		else {
+			$puller = 0;
+		}
+		// dd($puller);
+
+		if (isset($input['rollers']))
+			$rollers = 1;
+		else {
+			$rollers = 0;
+		}
+		// dd($rollers);
+
+		$db = DB::connection('sqlsrv')->select(DB::raw("SELECT * FROM machines WHERE os = '".$machine."' "));
+		$id = $db[0]->id;
+
+		$table = machines::findOrFail($id);
+		$table->gauge = $gauge;
+		$table->gadget = $gadget;
+		$table->el_dev_small_brand = $el_dev_small_brand;
+		$table->el_dev_small_quantity = $el_dev_small_quantity;
+		$table->el_dev_big_brand = $el_dev_big_brand;
+		$table->el_dev_big_quantity = $el_dev_big_quantity;
+		$table->puller = $puller;
+		$table->rollers = $rollers;
+		$table->save();
+
+		// return Redirect::to('add_info');
+		$msgs = 'Succesfuly saved';
+		$machines = DB::connection('sqlsrv')->select(DB::raw("SELECT os, brand, type, code FROM machines order by id"));
+		return view('Mechanics.add_info', compact('machines','msgs'));
+	}
+
+// CLASS
+	public function class_table() {
+
+		$data = DB::connection('sqlsrv2')->select(DB::raw("SELECT *
+			,(SELECT COUNT([MachNum]) FROM [CNF_MachPool] WHERE MaTyCod = IntKey) as count_machine
+			,(SELECT image FROM [172.27.161.200].[mechanics].[dbo].[class_tables] WHERE  IntKey = [CNF_MaTypes].IntKey) as image
+  			FROM [BdkCLZG].[dbo].[CNF_MaTypes]
+  			WHERE IntKey > 199"));
+		// dd($data);
+		return view('Mechanics.class_table', compact('data'));
+	}
+
+	public function add_class() {
+
+		return view('Mechanics.add_class');
+	}
+
+	public function add_class_post(Request $request) {
+
+		// $this->validate($request, ['pin'=>'required|min:4|max:5']);
+		$forminput = $request->all(); 
+
+		$brand = trim($forminput['brand']);
+		$code = trim($forminput['code']);
+		$class = trim($forminput['class']);
+
+		$exist = DB::connection('sqlsrv2')->select(DB::raw("SELECT *
+  			FROM [BdkCLZG].[dbo].[CNF_MaTypes]
+  			WHERE Brand = '".$brand."' AND MaCod = '".$code."' AND MaTyp = '".$class."' "));
+
+		if (isset($exist[0]->id)) {
+			// exist
+			$id = $exist[0]->id;
+
+			dd('Combination of Brand, Code and Class already exist.');
+
+
+		} else { 
+			// add in both inteos tables
+			$su_last_id = DB::connection('sqlsrv2')->select(DB::raw("SELECT TOP 1 [IntKey]
+				FROM [BdkCLZG].[dbo].[CNF_MaTypes]
+				ORDER BY [IntKey] desc"));
+
+			$id = (int)$su_last_id[0]->IntKey + 1;
+
+			$su = DB::connection('sqlsrv2')->update(DB::raw("INSERT INTO [BdkCLZG].[dbo].[CNF_MaTypes]
+				([IntKey],[Brand],[MaTyp],[MaCod])
+				VALUES
+				('".$id."', '".$brand."', '".$class."','".$code."')  				
+  				"));
+
+			$ki = DB::connection('sqlsrv2')->update(DB::raw("INSERT INTO [172.27.161.221\INTEOSKKA].[BdkCLZKKA].[dbo].[CNF_MaTypes]
+				([IntKey],[Brand],[MaTyp],[MaCod])
+				VALUES
+				('".$id."', '".$brand."', '".$class."','".$code."')  				
+  				"));
+
+
+
+		}
+		return Redirect::to('class_table');
+	}
+
+	public function edit_class($id) {
+		
+		// dd($id);
+		$data = DB::connection('sqlsrv2')->select(DB::raw("SELECT *
+  			FROM [BdkCLZG].[dbo].[CNF_MaTypes] 
+  			WHERE IntKey = '".$id."' "));
+
+		$brand = $data[0]->Brand;
+		$code = $data[0]->MaCod;
+		$class = $data[0]->MaTyp;
+
+
+
+		return view('Mechanics.add_class', compact('id','brand','code','class'));
+	}
+
+	public function edit_class_post(Request $request) {
+
+		// $this->validate($request, ['pin'=>'required|min:4|max:5']);
+		$forminput = $request->all(); 
+
+		$brand = trim($forminput['brand']);
+		$code = trim($forminput['code']);
+		$class = trim($forminput['class']);
+		$id = $forminput['id'];
+
+		$exist = DB::connection('sqlsrv2')->select(DB::raw("SELECT *
+  			FROM [BdkCLZG].[dbo].[CNF_MaTypes]
+  			WHERE Brand = '".$brand."' AND MaCod = '".$code."' AND MaTyp = '".$class."' "));
+
+		if (isset($exist[0]->id)) {
+			// exist
+			$id = $exist[0]->id;
+			dd('Combination of Brand, Code and Class already exist.');
+
+		} else { 
+			// add in both inteos tables
+			
+			$su = DB::connection('sqlsrv2')->update(DB::raw("UPDATE [BdkCLZG].[dbo].[CNF_MaTypes]
+				SET [Brand] = '".$brand."', [MaTyp] = '".$class."', [MaCod] = '".$code."'
+				WHERE [IntKey] = '".(int)$id."'
+  				"));
+
+			$ki = DB::connection('sqlsrv2')->update(DB::raw("UPDATE [172.27.161.221\INTEOSKKA].[BdkCLZKKA].[dbo].[CNF_MaTypes]
+				SET [Brand] = '".$brand."', [MaTyp] = '".$class."', [MaCod] = '".$code."'
+				WHERE [IntKey] = '".(int)$id."'
+  				"));
+
+			$class_table = DB::connection('sqlsrv')->update(DB::raw("UPDATE class_tables
+				SET brand = '".$brand."', class = '".$class."', code = '".$code."'
+				WHERE [IntKey] = '".(int)$id."'
+  				"));
+
+		}
+
+		return Redirect::to('class_table');
+	}
+
+	public function upload_image(Request $request){
+		// dd($id);
+
+		$forminput = $request->all(); 
+		// dd($forminput);
+
+		$id = trim($forminput['IntKey']);
+		$brand = trim($forminput['brand']);
+		$code = trim($forminput['code']);
+		$class = trim($forminput['class']);
+
+		return view('Mechanics.upload_image', compact('id','brand','code','class'));	
+	}
+
+
+
 }

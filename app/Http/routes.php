@@ -44,7 +44,14 @@ Route::get('add_location','settingsController@add_location');
 Route::post('add_location_post', 'settingsController@add_location_post');
 Route::get('edit_location/{id}','settingsController@edit_location');
 Route::post('edit_location_post/{id}', 'settingsController@edit_location_post');
-// Route::get('remove_location/{id}', 'settingsController@remove_location');
+Route::get('remove_location/{id}', 'settingsController@remove_location');
+
+// Gadget
+Route::get('gadget','settingsController@gadget');
+Route::get('add_gadget','settingsController@add_gadget');
+Route::post('add_gadget_post', 'settingsController@add_gadget_post');
+Route::get('edit_gadget/{id}','settingsController@edit_gadget');
+Route::post('edit_gadget_post/{id}', 'settingsController@edit_gadget_post');
 
 // Mechanics
 Route::get('mechanics','mechanicsController@index');
@@ -103,15 +110,22 @@ Route::get('fix_machine_cancel/{session}', 'mechanicsController@fix_machine_canc
 Route::get('search_machine', 'mechanicsController@search_machine');
 Route::get('search_by_barcode', 'mechanicsController@search_by_barcode');
 Route::post('search_by_barcode_scan', 'mechanicsController@search_by_barcode_scan');
-
 Route::get('search_by_location', 'mechanicsController@search_by_location');
 Route::post('search_by_location_scan', 'mechanicsController@search_by_location_scan');
+
+Route::get('advanced_search', 'mechanicsController@advanced_search');
+Route::post('advanced_search_post', 'mechanicsController@advanced_search_post');
 
 Route::get('add_comment', 'mechanicsController@add_comment');
 Route::post('add_comment_scan', 'mechanicsController@add_comment_scan');
 Route::post('add_comment_post', 'mechanicsController@add_comment_post');
 Route::get('delete_comment_post/{id}', 'mechanicsController@delete_comment_post');
 Route::get('delete_comment_post_confirm/{id}', 'mechanicsController@delete_comment_post_confirm');
+
+Route::get('add_info', 'mechanicsController@add_info');
+Route::post('add_info_scan', 'mechanicsController@add_info_scan');
+Route::post('add_info_post', 'mechanicsController@add_info_post');
+
 
 Route::get('disable_machine', 'mechanicsController@disable_machine');
 
@@ -128,13 +142,37 @@ Route::get('sell_machine_remove/{id}/{ses}', 'mechanicsController@sell_machine_r
 Route::get('sell_machine_confirm/{session}', 'mechanicsController@sell_machine_confirm');
 Route::get('sell_machine_cancel/{session}', 'mechanicsController@sell_machine_cancel');
 
+Route::get('machine_edit/{machine_id}', 'mechanicsController@machine_edit');
+Route::post('machine_edit_post', 'mechanicsController@machine_edit_post');
+
+Route::get('class_table', 'mechanicsController@class_table');
+Route::get('add_class','mechanicsController@add_class');
+Route::post('add_class_post','mechanicsController@add_class_post');
+Route::get('edit_class/{id}','mechanicsController@edit_class');
+Route::post('edit_class_post','mechanicsController@edit_class_post');
+
+Route::post('upload_image', 'mechanicsController@upload_image');
+Route::post('upload_class_image', 'importImageController@upload_class_image');
+
 // Admin
 Route::get('machines_in_inteos','adminController@machines_in_inteos');
 Route::get('update_from_inteos','adminController@update_from_inteos');
 Route::get('machines_table','adminController@machines_table');
 
+// Workstudy
+Route::get('workstudy','workstudyController@index');
+Route::post('logincheck_ws','workstudyController@logincheck_ws');
+Route::get('afterlogin_ws','workstudyController@afterlogin_ws');
+Route::get('add_comment_ws','workstudyController@add_comment_ws');
+Route::post('add_comment_ws_scan', 'workstudyController@add_comment_ws_scan');
+Route::post('add_comment_ws_post', 'workstudyController@add_comment_ws_post');
+
+
 // Import
 
 Route::get('import','importController@index');
 Route::post('postUpdateRemark', 'importController@postUpdateRemark');
+Route::post('postUpdateInfo', 'importController@postUpdateInfo');
+
+Route::post('postImportMachines', 'importController@postImportMachines');
 
