@@ -168,6 +168,20 @@ Route::post('add_comment_ws_scan', 'workstudyController@add_comment_ws_scan');
 Route::post('add_comment_ws_post', 'workstudyController@add_comment_ws_post');
 
 
+// Guides
+Route::get('guide_table','guideController@guide_table');
+Route::get('guide_edit/{id}','guideController@guide_edit');
+Route::post('guide_update_post','guideController@guide_update_post');
+
+Route::get('guide_type_table','guideController@guide_type_table');
+Route::get('guide_type_edit/{id}','guideController@guide_type_edit');
+Route::post('guide_type_edit_post','guideController@guide_type_edit_post');
+
+Route::get('supplier_table','guideController@supplier_table');
+Route::get('supplier_edit/{id}','guideController@supplier_edit');
+Route::post('supplier_edit_post','guideController@supplier_edit_post');
+
+
 // Import
 
 Route::get('import','importController@index');

@@ -67,6 +67,17 @@
 							<li><a href="{{ url('/advanced_search') }}">Advanced search</a></li>
 							<li><a href="{{ url('/class_table') }}">Class table</a></li>
 							<li><a href="{{ url('/import') }}">Import machines</a></li>
+							<li class="dropdown">
+								<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">Guides<span class="caret"></span></a>
+								<ul class="dropdown-menu" role="menu">
+									<li><a href="{{ url('guide_table') }}">Guide table</a></li>
+									<li role="separator" class="divider"></li>
+									<li><a href="{{ url('guide_type_table') }}">Guide type table</a></li>
+									<li role="separator" class="divider"></li>
+									<li><a href="{{ url('supplier_table') }}">Supplier table</a></li>
+									
+								</ul>
+							</li>
 						@endif
 						@if (Auth::user()->name == 'magacin')
 							<li><a href="{{ url('/') }}">Home</a></li>

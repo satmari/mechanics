@@ -3218,7 +3218,13 @@ class mechanicsController extends Controller {
 	public function class_table() {
 
 		$data = DB::connection('sqlsrv2')->select(DB::raw("SELECT *
-			,(SELECT COUNT([MachNum]) FROM [CNF_MachPool] WHERE MaTyCod = IntKey) as count_machine
+			,(SELECT COUNT([MachNum]) 
+				FROM [CNF_MachPool] as p 
+				JOIN [172.27.161.200].[mechanics].[dbo].[machines] as m ON p.MachNum = m.os
+				WHERE 
+					MaTyCod = IntKey
+					AND m.machine_status NOT IN ('SOLD', 'WRITE_OFF')
+			 ) as count_machine
 			,(SELECT image FROM [172.27.161.200].[mechanics].[dbo].[class_tables] WHERE  IntKey = [CNF_MaTypes].IntKey) as image
   			FROM [BdkCLZG].[dbo].[CNF_MaTypes]
   			WHERE IntKey > 199"));
