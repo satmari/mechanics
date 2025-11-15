@@ -10,10 +10,10 @@
                 <div class="panel-heading">
                     <div class="row">
                         <div class="col-md-6">
-                            <strong>History for Guide: {{ $guide->guide_code }} - {{ $guide->guide_description }}</strong>
+                            <strong>History for attachment: {{ $attachment->attachment_code }} - {{ $attachment->attachment_description }}</strong>
                         </div>
                         <div class="col-md-6 text-right">
-                            <a href="{{ url('guides') }}" class="btn btn-default btn-add">Back</a>
+                            <a href="{{ url('attachments') }}" class="btn btn-default btn-add">Back</a>
                         </div>
                     </div>
                 </div>

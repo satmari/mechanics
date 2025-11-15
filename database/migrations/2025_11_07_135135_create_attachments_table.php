@@ -24,7 +24,6 @@ class CreateAttachmentsTable extends Migration {
 
 			$table->string('style')->nullable();
 			$table->string('operation')->nullable();
-
 			$table->text('notes')->nullable();
 			
 			$table->integer('location_a_id')->nullable();

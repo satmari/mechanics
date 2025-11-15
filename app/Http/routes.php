@@ -205,16 +205,33 @@ Route::post('supplier_edit_post','guideController@supplier_edit_post');
 
 
 // Attachment
-Route::get('attachment_table','attachmentController@attachment_table');
-Route::get('attachment_add', 'attachmentController@attachment_add');
-Route::post('attachment_add_post', 'attachmentController@attachment_add_post');
+Route::get('attachments','attachmentController@attachment_table');
+Route::get('attachments_add', 'attachmentController@attachment_add');
+Route::post('attachments_add', 'attachmentController@attachment_add_post');
 Route::get('attachment_edit/{id}','attachmentController@attachment_edit');
 Route::post('attachment_update_post','attachmentController@attachment_update_post');
 
+Route::get('attachment_history/{id}', 'attachmentController@attachment_history');
+
+Route::get('attachments_transfer', 'attachmentController@attachment_transfer');
+Route::post('attachments_transfer_1','attachmentController@attachment_transfer_1');
+Route::post('attachments_transfer_post', 'attachmentController@attachments_transfer_post');
+
+Route::get('attachments_add_remove', 'attachmentController@attachment_add_remove');
+Route::post('attachments_add_remove_1','attachmentController@attachment_add_remove_1');
+Route::post('attachments_add_remove_post', 'attachmentController@attachment_add_remove_post');
+
+Route::get('attachment_location_table','attachmentController@attachment_location_table');
+Route::get('attachment_location_table_add','attachmentController@attachment_location_table_add');
+Route::post('attachment_location_table_post','attachmentController@attachment_location_table_post');
+Route::get('attachment_location_edit/{id}','attachmentController@attachment_location_edit');
+Route::post('attachment_location_edit_post','attachmentController@attachment_location_edit_post');
+
 Route::get('attachment_type_table','attachmentController@attachment_type_table');
+Route::get('attachment_type_table_add','attachmentController@attachment_type_table_add');
+Route::post('attachment_type_table_post','attachmentController@attachment_type_table_post');
 Route::get('attachment_type_edit/{id}','attachmentController@attachment_type_edit');
 Route::post('attachment_type_edit_post','attachmentController@attachment_type_edit_post');
-
 
 
 // Import

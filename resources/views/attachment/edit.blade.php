@@ -6,7 +6,7 @@
         <div class="text-center col-md-10 col-md-offset-1">
             <div class="panel panel-default">
                 <div class="panel-heading">
-                    Edit Guide:
+                    Edit attachment:
                 </div>
 
                 @if(isset($msge))
@@ -17,7 +17,7 @@
                 @endif
 
                 {!! Form::open([
-                    'url' => url('guide_update_post/'.$data->id),
+                    'url' => url('attachment_update_post/'.$data->id),
                     'method' => 'POST',
                     'class' => 'form-horizontal',
                     'enctype' => 'multipart/form-data'  
@@ -25,27 +25,27 @@
 
                     <div class="panel-body">
 
-                        {{-- Guide Code --}}
+                        {{-- attachment Code --}}
                         <div class="form-group">
-                            {!! Form::label('guide_code', 'Code', ['class'=>'col-sm-2 control-label']) !!}
+                            {!! Form::label('attachment_code', 'Code', ['class'=>'col-sm-2 control-label']) !!}
                             <div class="col-sm-10">
-                                {!! Form::text('guide_code', $data->guide_code, ['class'=>'form-control', 'required']) !!}
+                                {!! Form::text('attachment_code', $data->attachment_code, ['class'=>'form-control', 'required']) !!}
                             </div>
                         </div>
 
                         {{-- Description --}}
                         <div class="form-group">
-                            {!! Form::label('guide_description', 'Description', ['class'=>'col-sm-2 control-label']) !!}
+                            {!! Form::label('attachment_description', 'Description', ['class'=>'col-sm-2 control-label']) !!}
                             <div class="col-sm-10">
-                                {!! Form::text('guide_description', $data->guide_description, ['class'=>'form-control']) !!}
+                                {!! Form::text('attachment_description', $data->attachment_description, ['class'=>'form-control']) !!}
                             </div>
                         </div>
 
-                        {{-- Guide Type --}}
+                        {{-- attachment Type --}}
                         <div class="form-group">
-                            {!! Form::label('guide_type_id', 'Guide Type', ['class'=>'col-sm-2 control-label']) !!}
+                            {!! Form::label('attachment_type_id', 'attachment Type', ['class'=>'col-sm-2 control-label']) !!}
                             <div class="col-sm-10">
-                                {!! Form::select('guide_type_id', $guide_types, $data->guide_type_id, ['class'=>'form-control', 'placeholder'=>'Select Type']) !!}
+                                {!! Form::select('attachment_type_id', $attachment_types, $data->attachment_type_id, ['class'=>'form-control', 'placeholder'=>'Select Type']) !!}
                             </div>
                         </div>
 
@@ -57,35 +57,6 @@
                             </div>
                         </div>
 
-
-                        {{-- Fold --}}
-                        <div class="form-group">
-                            {!! Form::label('fold', 'Fold', ['class'=>'col-sm-2 control-label']) !!}
-                            <div class="col-sm-10">
-                                {!! Form::text('fold', $data->fold, ['class'=>'form-control']) !!}
-                            </div>
-                        </div>
-
-                        {{-- Entry / Exit / Thickness / Elastic --}}
-                        <div class="form-group">
-                            {!! Form::label('entry_mm', 'Entry (mm)', ['class'=>'col-sm-2 control-label']) !!}
-                            <div class="col-sm-10">{!! Form::text('entry_mm', $data->entry_mm, ['class'=>'form-control']) !!}</div>
-                        </div>
-
-                        <div class="form-group">
-                            {!! Form::label('exit_mm', 'Exit (mm)', ['class'=>'col-sm-2 control-label']) !!}
-                            <div class="col-sm-10">{!! Form::text('exit_mm', $data->exit_mm, ['class'=>'form-control']) !!}</div>
-                        </div>
-
-                        <div class="form-group">
-                            {!! Form::label('tickness_mm', 'Thickness (mm)', ['class'=>'col-sm-2 control-label']) !!}
-                            <div class="col-sm-10">{!! Form::text('tickness_mm', $data->tickness_mm, ['class'=>'form-control']) !!}</div>
-                        </div>
-
-                        <div class="form-group">
-                            {!! Form::label('elastic_mm', 'Elastic (mm)', ['class'=>'col-sm-2 control-label']) !!}
-                            <div class="col-sm-10">{!! Form::text('elastic_mm', $data->elastic_mm, ['class'=>'form-control']) !!}</div>
-                        </div>
 
                         {{-- Style --}}
                         <div class="form-group">
@@ -119,9 +90,9 @@
 
                         {{-- Location --}}
                         <div class="form-group">
-                            {!! Form::label('location_g_id', 'Location', ['class'=>'col-sm-2 control-label']) !!}
+                            {!! Form::label('location_a_id', 'Location', ['class'=>'col-sm-2 control-label']) !!}
                             <div class="col-sm-10">
-                                {!! Form::select('location_g_id', $locations, $data->location_g_id, ['class'=>'form-control', 'placeholder'=>'Select Location']) !!}
+                                {!! Form::select('location_a_id', $locations, $data->location_a_id, ['class'=>'form-control', 'placeholder'=>'Select Location']) !!}
                             </div>
                         </div>
 
@@ -142,7 +113,7 @@
                                     <p class="mt-2">Current: 
                                         <a href="javascript:void(0);" 
                                            onclick="window.open(
-                                               '{{ asset('public/storage/GuidesFiles/' . $data->picture) }}', 
+                                               '{{ asset('public/storage/attachmentsFiles/' . $data->picture) }}', 
                                                '_blank', 
                                                'toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes,width=800,height=600'
                                            )">
@@ -162,7 +133,7 @@
                                     <p class="mt-2">Current: 
                                         <a href="javascript:void(0);" 
                                            onclick="window.open(
-                                               '{{ asset('public/storage/GuidesFiles/' . $data->video) }}', 
+                                               '{{ asset('public/storage/attachmentsFiles/' . $data->video) }}', 
                                                '_blank', 
                                                'toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes,width=800,height=600'
                                            )">
@@ -187,7 +158,7 @@
                         <div class="form-group">
                             <div class="col-sm-offset-1 col-sm-10">
                                 {!! Form::submit('Update', ['class'=>'btn btn-primary']) !!}
-                                <a href="{{ url('guides') }}" class="btn btn-default">Cancel</a>
+                                <a href="{{ url('attachments') }}" class="btn btn-default">Cancel</a>
                             </div>
                         </div>
 

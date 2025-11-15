@@ -89,9 +89,9 @@
 								<ul class="dropdown-menu" role="menu">
 									<li><a href="{{ url('attachments') }}">Attachments table</a></li>
 									<li role="separator" class="divider"></li>
-									<li><a href="{{ url('attachmet_type_table') }}">Attachments Type</a></li>
+									<li><a href="{{ url('attachment_type_table') }}">Attachments Type</a></li>
 									<li role="separator" class="divider"></li>
-									<li><a href="{{ url('attachmets_locations') }}">Attachment Locations</a></li>
+									<li><a href="{{ url('attachment_location_table') }}">Attachment Locations</a></li>
 									<li role="separator" class="divider"></li>
 									<li><a href="{{ url('supplier_table') }}">Supplier table</a></li>
 									
