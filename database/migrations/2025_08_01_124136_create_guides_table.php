@@ -20,6 +20,53 @@ class CreateGuidesTable extends Migration {
 			$table->string('guide_description')->nullable();
 
 			$table->integer('guide_type_id')->nullable();
+			$table->string('machine_class')->nullable();
+
+			$table->string('fold')->nullable();
+			$table->string('entry_mm')->nullable();
+			$table->string('exit_mm')->nullable();
+			$table->string('tickness_mm')->nullable();
+			$table->string('elastic_mm')->nullable();
+
+			$table->string('style')->nullable();
+			$table->string('operation')->nullable();
+			$table->text('notes')->nullable();
+			
+			$table->integer('location_g_id')->nullable();
+			$table->integer('suplier_id')->nullable();
+			$table->string('calz_code')->nullable();
+			
+			$table->string('picture')->nullable();
+			$table->string('video')->nullable();
+			
+			$table->string('status')->nullable();
+			
+			$table->timestamps();
+
+		});
+	}
+
+	/**
+	 * Reverse the migrations.
+	 *
+	 * @return void
+	 */
+	public function down()
+	{
+		Schema::drop('guides');
+	}
+
+}
+
+
+/*
+
+			$table->increments('id');
+
+			$table->string('guide_code')->unique();
+			$table->string('guide_description')->nullable();
+
+			$table->integer('guide_type_id')->nullable();
 			$table->integer('suplier_id')->nullable();
 			$table->string('machine_class')->nullable();
 			$table->string('location')->nullable();
@@ -47,17 +94,4 @@ class CreateGuidesTable extends Migration {
 
 			$table->timestamps();
 
-		});
-	}
-
-	/**
-	 * Reverse the migrations.
-	 *
-	 * @return void
-	 */
-	public function down()
-	{
-		Schema::drop('guides');
-	}
-
-}
+*/

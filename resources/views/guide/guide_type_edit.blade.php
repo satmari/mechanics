@@ -9,20 +9,11 @@
                     Edit Guide Type Information:
                 </div>
 
-                @if (session('success'))
-                    <div class="panel-heading">
-                        <small><i>&nbsp;&nbsp;&nbsp; <span style="color:green"><b>{{ session('success') }}</b></span></i></small>
-                    </div>
+                @if(isset($msge))
+                    <div class="alert alert-danger">{{ $msge }}</div>
                 @endif
-
-                @if ($errors->any())
-                    <div class="panel-body">
-                        <ul class="alert alert-danger list-unstyled">
-                            @foreach ($errors->all() as $error)
-                                <li><i class="glyphicon glyphicon-exclamation-sign"></i> {{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
+                @if(isset($msgs))
+                    <div class="alert alert-success">{{ $msgs }}</div>
                 @endif
 
                 {!! Form::open(['url' => 'guide_type_edit_post']) !!}
@@ -43,9 +34,9 @@
 
                 {!! Form::close() !!}
 
-                <hr>
+               <!--  <hr>
                 <a href="{{ url('guide_type_table') }}" class="btn btn-default btn-lg center-block">Back</a>
-                <br><br>
+                <br><br> -->
             </div>
         </div>
     </div>

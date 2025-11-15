@@ -5,8 +5,17 @@
     <div class="row">
         <div class="text-center">
             <div class="panel panel-default">
-                <div class="panel-heading">Suppliers table<br></div>
-                    
+                <div class="panel-heading"><h3>Suppliers table</h3><br>&nbsp;&nbsp;
+                    <a href="{{ url('supplier_table_add') }}" class="btn btn-xs btn-info btn-add">Add new supplier</a>
+                </div>
+                
+                @if(isset($msge))
+                    <div class="alert alert-danger">{{ $msge }}</div>
+                @endif
+                @if(isset($msgs))
+                    <div class="alert alert-success">{{ $msgs }}</div>
+                @endif
+
                 <div class="input-group"> <span class="input-group-addon">Filter</span>
                     <input id="filter" type="text" class="form-control" placeholder="Type here...">
                 </div>

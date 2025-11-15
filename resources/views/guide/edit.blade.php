@@ -6,33 +6,21 @@
         <div class="text-center col-md-10 col-md-offset-1">
             <div class="panel panel-default">
                 <div class="panel-heading">
-                    Edit Guide Information:
+                    Edit Guide:
                 </div>
 
-                @if (session('success'))
-                    <div class="panel-heading">
-                        <small>
-                            <i>&nbsp;&nbsp;&nbsp; 
-                                <span style="color:green"><b>{{ session('success') }}</b></span>
-                            </i>
-                        </small>
-                    </div>
+                @if(isset($msge))
+                    <div class="alert alert-danger">{{ $msge }}</div>
+                @endif
+                @if(isset($msgs))
+                    <div class="alert alert-success">{{ $msgs }}</div>
                 @endif
 
-                @if ($errors->any())
-                    <div class="panel-body">
-                        <ul class="alert alert-danger list-unstyled">
-                            @foreach ($errors->all() as $error)
-                                <li><i class="glyphicon glyphicon-exclamation-sign"></i> {{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
-                @endif
-
-                {!! Form::model($data, [
-                    'url' => url('guide_update_post/' . $data->id),
-                    'method' => 'PUT',
-                    'class' => 'form-horizontal'
+                {!! Form::open([
+                    'url' => url('guide_update_post/'.$data->id),
+                    'method' => 'POST',
+                    'class' => 'form-horizontal',
+                    'enctype' => 'multipart/form-data'  
                 ]) !!}
 
                     <div class="panel-body">
@@ -41,39 +29,23 @@
                         <div class="form-group">
                             {!! Form::label('guide_code', 'Code', ['class'=>'col-sm-2 control-label']) !!}
                             <div class="col-sm-10">
-                                {!! Form::text('guide_code', null, ['class'=>'form-control']) !!}
+                                {!! Form::text('guide_code', $data->guide_code, ['class'=>'form-control', 'required']) !!}
                             </div>
                         </div>
 
-                        {{-- Guide Description --}}
+                        {{-- Description --}}
                         <div class="form-group">
                             {!! Form::label('guide_description', 'Description', ['class'=>'col-sm-2 control-label']) !!}
                             <div class="col-sm-10">
-                                {!! Form::text('guide_description', null, ['class'=>'form-control']) !!}
+                                {!! Form::text('guide_description', $data->guide_description, ['class'=>'form-control']) !!}
                             </div>
                         </div>
 
-                        {{-- Guide Type Dropdown --}}
+                        {{-- Guide Type --}}
                         <div class="form-group">
                             {!! Form::label('guide_type_id', 'Guide Type', ['class'=>'col-sm-2 control-label']) !!}
                             <div class="col-sm-10">
-                                {!! Form::select('guide_type_id', $guide_types, $data->guide_type_id, ['class'=>'form-control']) !!}
-                            </div>
-                        </div>
-
-                        {{-- Supplier Dropdown --}}
-                        <div class="form-group">
-                            {!! Form::label('suplier_id', 'Supplier', ['class'=>'col-sm-2 control-label']) !!}
-                            <div class="col-sm-10">
-                                {!! Form::select('suplier_id', $suppliers, $data->suplier_id, ['class'=>'form-control']) !!}
-                            </div>
-                        </div>
-
-                        {{-- Location --}}
-                        <div class="form-group">
-                            {!! Form::label('location', 'Location', ['class'=>'col-sm-2 control-label']) !!}
-                            <div class="col-sm-10">
-                                {!! Form::text('location', null, ['class'=>'form-control']) !!}
+                                {!! Form::select('guide_type_id', $guide_types, $data->guide_type_id, ['class'=>'form-control', 'placeholder'=>'Select Type']) !!}
                             </div>
                         </div>
 
@@ -81,31 +53,45 @@
                         <div class="form-group">
                             {!! Form::label('machine_class', 'Machine Class', ['class'=>'col-sm-2 control-label']) !!}
                             <div class="col-sm-10">
-                                {!! Form::text('machine_class', null, ['class'=>'form-control']) !!}
+                                {!! Form::text('machine_class', $data->machine_class, ['class'=>'form-control']) !!}
                             </div>
                         </div>
 
-                        {{-- Calz Code --}}
+
+                        {{-- Fold --}}
                         <div class="form-group">
-                            {!! Form::label('calz_code', 'Calz Code', ['class'=>'col-sm-2 control-label']) !!}
+                            {!! Form::label('fold', 'Fold', ['class'=>'col-sm-2 control-label']) !!}
                             <div class="col-sm-10">
-                                {!! Form::text('calz_code', null, ['class'=>'form-control']) !!}
+                                {!! Form::text('fold', $data->fold, ['class'=>'form-control']) !!}
                             </div>
+                        </div>
+
+                        {{-- Entry / Exit / Thickness / Elastic --}}
+                        <div class="form-group">
+                            {!! Form::label('entry_mm', 'Entry (mm)', ['class'=>'col-sm-2 control-label']) !!}
+                            <div class="col-sm-10">{!! Form::text('entry_mm', $data->entry_mm, ['class'=>'form-control']) !!}</div>
+                        </div>
+
+                        <div class="form-group">
+                            {!! Form::label('exit_mm', 'Exit (mm)', ['class'=>'col-sm-2 control-label']) !!}
+                            <div class="col-sm-10">{!! Form::text('exit_mm', $data->exit_mm, ['class'=>'form-control']) !!}</div>
+                        </div>
+
+                        <div class="form-group">
+                            {!! Form::label('tickness_mm', 'Thickness (mm)', ['class'=>'col-sm-2 control-label']) !!}
+                            <div class="col-sm-10">{!! Form::text('tickness_mm', $data->tickness_mm, ['class'=>'form-control']) !!}</div>
+                        </div>
+
+                        <div class="form-group">
+                            {!! Form::label('elastic_mm', 'Elastic (mm)', ['class'=>'col-sm-2 control-label']) !!}
+                            <div class="col-sm-10">{!! Form::text('elastic_mm', $data->elastic_mm, ['class'=>'form-control']) !!}</div>
                         </div>
 
                         {{-- Style --}}
                         <div class="form-group">
                             {!! Form::label('style', 'Style', ['class'=>'col-sm-2 control-label']) !!}
                             <div class="col-sm-10">
-                                {!! Form::text('style', null, ['class'=>'form-control']) !!}
-                            </div>
-                        </div>
-
-                        {{-- Fold --}}
-                        <div class="form-group">
-                            {!! Form::label('fold', 'Fold', ['class'=>'col-sm-2 control-label']) !!}
-                            <div class="col-sm-10">
-                                {!! Form::text('fold', null, ['class'=>'form-control']) !!}
+                                {!! Form::text('style', $data->style, ['class'=>'form-control']) !!}
                             </div>
                         </div>
 
@@ -113,91 +99,121 @@
                         <div class="form-group">
                             {!! Form::label('operation', 'Operation', ['class'=>'col-sm-2 control-label']) !!}
                             <div class="col-sm-10">
-                                {!! Form::text('operation', null, ['class'=>'form-control']) !!}
+                                {!! Form::text('operation', $data->operation, ['class'=>'form-control']) !!}
                             </div>
                         </div>
 
-                        {{-- Numeric fields --}}
+                        {{-- Notes --}}
                         <div class="form-group">
-                            {!! Form::label('entry_mm', 'Entry (mm)', ['class'=>'col-sm-2 control-label']) !!}
-                            <div class="col-sm-10">{!! Form::number('entry_mm', null, ['class'=>'form-control', 'step'=>'0.01']) !!}</div>
+                            {!! Form::label('notes', 'Notes', ['class'=>'col-sm-2 control-label']) !!}
+                            <div class="col-sm-10">{!! Form::textarea('notes', $data->notes, ['class'=>'form-control']) !!}</div>
                         </div>
 
+                        {{-- Supplier --}}
                         <div class="form-group">
-                            {!! Form::label('exit_mm', 'Exit (mm)', ['class'=>'col-sm-2 control-label']) !!}
-                            <div class="col-sm-10">{!! Form::number('exit_mm', null, ['class'=>'form-control', 'step'=>'0.01']) !!}</div>
+                            {!! Form::label('suplier_id', 'Supplier', ['class'=>'col-sm-2 control-label']) !!}
+                            <div class="col-sm-10">
+                                {!! Form::select('suplier_id', $suppliers, $data->suplier_id, ['class'=>'form-control', 'placeholder'=>'Select Supplier']) !!}
+                            </div>
                         </div>
 
+                        {{-- Location --}}
                         <div class="form-group">
-                            {!! Form::label('tickness_mm', 'Thickness (mm)', ['class'=>'col-sm-2 control-label']) !!}
-                            <div class="col-sm-10">{!! Form::number('tickness_mm', null, ['class'=>'form-control', 'step'=>'0.01']) !!}</div>
+                            {!! Form::label('location_g_id', 'Location', ['class'=>'col-sm-2 control-label']) !!}
+                            <div class="col-sm-10">
+                                {!! Form::select('location_g_id', $locations, $data->location_g_id, ['class'=>'form-control', 'placeholder'=>'Select Location']) !!}
+                            </div>
                         </div>
 
+                        {{-- Calz Code --}}
                         <div class="form-group">
-                            {!! Form::label('elastic_mm', 'Elastic (mm)', ['class'=>'col-sm-2 control-label']) !!}
-                            <div class="col-sm-10">{!! Form::number('elastic_mm', null, ['class'=>'form-control', 'step'=>'0.01']) !!}</div>
+                            {!! Form::label('calz_code', 'Calz Code', ['class'=>'col-sm-2 control-label']) !!}
+                            <div class="col-sm-10">
+                                {!! Form::text('calz_code', $data->calz_code, ['class'=>'form-control']) !!}
+                            </div>
                         </div>
 
-                        {{-- Picture & Video --}}
+                        {{-- Picture --}}
                         <div class="form-group">
-                            {!! Form::label('picture', 'Picture', ['class'=>'col-sm-2 control-label']) !!}
-                            <div class="col-sm-10">{!! Form::text('picture', null, ['class'=>'form-control']) !!}</div>
+                            {!! Form::label('picture', 'Picture (upload)', ['class'=>'col-sm-2 control-label']) !!}
+                            <div class="col-sm-10">
+                                <input type="file" name="picture" class="form-control">
+                                @if(isset($data) && $data->picture)
+                                    <p class="mt-2">Current: 
+                                        <a href="javascript:void(0);" 
+                                           onclick="window.open(
+                                               '{{ asset('public/storage/GuidesFiles/' . $data->picture) }}', 
+                                               '_blank', 
+                                               'toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes,width=800,height=600'
+                                           )">
+                                           {{ $data->picture }}
+                                        </a>
+                                    </p>
+                                @endif
+                            </div>
                         </div>
+
+                        {{-- Video --}}
                         <div class="form-group">
-                            {!! Form::label('video', 'Video', ['class'=>'col-sm-2 control-label']) !!}
-                            <div class="col-sm-10">{!! Form::text('video', null, ['class'=>'form-control']) !!}</div>
+                            {!! Form::label('video', 'Video (upload)', ['class'=>'col-sm-2 control-label']) !!}
+                            <div class="col-sm-10">
+                                <input type="file" name="video" class="form-control">
+                                @if(isset($data) && $data->video)
+                                    <p class="mt-2">Current: 
+                                        <a href="javascript:void(0);" 
+                                           onclick="window.open(
+                                               '{{ asset('public/storage/GuidesFiles/' . $data->video) }}', 
+                                               '_blank', 
+                                               'toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=yes,width=800,height=600'
+                                           )">
+                                           {{ $data->video }}
+                                        </a>
+                                    </p>
+                                @endif
+                            </div>
                         </div>
 
                        
-                        {{-- Note --}}
-                        <div class="form-group">
-                            {!! Form::label('note', 'Note', ['class'=>'col-sm-2 control-label']) !!}
-                            <div class="col-sm-10">{!! Form::textarea('note', null, ['class'=>'form-control']) !!}</div>
-                        </div>
 
                         {{-- Status --}}
                         <div class="form-group">
                             {!! Form::label('status', 'Status', ['class'=>'col-sm-2 control-label']) !!}
                             <div class="col-sm-10">
-                                {!! Form::select('status', ['ACTIVE'=>'ACTIVE','INACTIVE'=>'INACTIVE'], null, ['class'=>'form-control']) !!}
+                                {!! Form::select('status', ['ACTIVE'=>'ACTIVE','INACTIVE'=>'INACTIVE'], $data->status, ['class'=>'form-control']) !!}
                             </div>
                         </div>
-
-                         <br>
-                        {{-- Quantities --}}
-                        <div class="form-group">
-                            <p>Stock Qty </p>
-                            {!! Form::label('qty_su', 'Su Qty', ['class'=>'col-sm-1 control-label']) !!}
-                            <div class="col-sm-2">{!! Form::number('qty_su', null, ['class'=>'form-control']) !!}</div>
-
-                            {!! Form::label('qty_ki', 'Ki Qty', ['class'=>'col-sm-1 control-label']) !!}
-                            <div class="col-sm-2">{!! Form::number('qty_ki', null, ['class'=>'form-control']) !!}</div>
-
-                            {!! Form::label('qty_se', 'Se Qty', ['class'=>'col-sm-1 control-label']) !!}
-                            <div class="col-sm-2">{!! Form::number('qty_se', null, ['class'=>'form-control']) !!}</div>
-
-                            {!! Form::label('qty_valy', 'Va Qty', ['class'=>'col-sm-1 control-label']) !!}
-                            <div class="col-sm-2">{!! Form::number('qty_valy', null, ['class'=>'form-control']) !!}</div>
-                        </div>
-                        <br>
 
                         {{-- Submit --}}
                         <div class="form-group">
                             <div class="col-sm-offset-1 col-sm-10">
                                 {!! Form::submit('Update', ['class'=>'btn btn-primary']) !!}
-                                <a href="{{ URL::previous() ? URL::previous() : url('guide_type_table') }}" class="btn btn-default">Cancel</a>
+                                <a href="{{ url('guides') }}" class="btn btn-default">Cancel</a>
                             </div>
                         </div>
 
                     </div>
+
                 {!! Form::close() !!}
-
-                <hr>
-                <a href="{{ url('guide_type_table') }}" class="btn btn-default btn-lg cent er-block">Back</a>
-                <br><br>
-
             </div>
         </div>
     </div>
 </div>
+
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const submitButton = form.querySelector('input[type="submit"]');
+
+    submitButton.addEventListener('click', function(event) {
+        const password = prompt("Enter password to confirm update:");
+        if (password !== "1234") {
+            event.preventDefault();
+            alert("Incorrect password. Update canceled.");
+        }
+    });
+});
+</script>
+
+
 @endsection

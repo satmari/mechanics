@@ -5,11 +5,21 @@
     <div class="row">
         <div class="text-center">
             <div class="panel panel-default">
-                <div class="panel-heading">Guide types table<br></div>
-                    
+                <div class="panel-heading"><h3>Guide types table</h3><br>&nbsp;&nbsp;
+                    <a href="{{ url('guide_type_table_add') }}" class="btn btn-xs btn-info btn-add">Add guide type</a>&nbsp;&nbsp;
+                </div>
+                
+                @if(isset($msge))
+                    <div class="alert alert-danger">{{ $msge }}</div>
+                @endif
+                @if(isset($msgs))
+                    <div class="alert alert-success">{{ $msgs }}</div>
+                @endif
+
                 <div class="input-group"> <span class="input-group-addon">Filter</span>
                     <input id="filter" type="text" class="form-control" placeholder="Type here...">
                 </div>
+
                 <table class="table table-striped table-bordered tableFixHead" id="sort" 
                 data-export-types="['excel']"
                 data-show-export="true"

@@ -169,21 +169,55 @@ Route::post('add_comment_ws_post', 'workstudyController@add_comment_ws_post');
 
 
 // Guides
-Route::get('guide_table','guideController@guide_table');
-Route::get('guide_edit/{id}','guideController@guide_edit');
-Route::post('guide_update_post','guideController@guide_update_post');
+Route::get('guides', 'guideController@guide_table');
+Route::get('guides_add', 'guideController@guide_add');
+Route::post('guides_add', 'guideController@guide_add_post');
+Route::get('guide_edit/{id}', 'guideController@guide_edit');
+Route::post('guide_update_post/{id}', 'guideController@guide_update_post');
+
+Route::get('guide_history/{id}', 'guideController@guide_history');
+
+Route::get('guides_transfer', 'guideController@guide_transfer');
+Route::post('guides_transfer_1','guideController@guide_transfer_1');
+Route::post('guides_transfer_post', 'guideController@guides_transfer_post');
+
+Route::get('guides_add_remove', 'guideController@guide_add_remove');
+Route::post('guides_add_remove_1','guideController@guide_add_remove_1');
+Route::post('guides_add_remove_post', 'guideController@guide_add_remove_post');
+
+Route::get('guide_location_table','guideController@guide_location_table');
+Route::get('guide_location_table_add','guideController@guide_location_table_add');
+Route::post('guide_location_table_post','guideController@guide_location_table_post');
+Route::get('guide_location_edit/{id}','guideController@guide_location_edit');
+Route::post('guide_location_edit_post','guideController@guide_location_edit_post');
 
 Route::get('guide_type_table','guideController@guide_type_table');
+Route::get('guide_type_table_add','guideController@guide_type_table_add');
+Route::post('guide_type_table_post','guideController@guide_type_table_post');
 Route::get('guide_type_edit/{id}','guideController@guide_type_edit');
 Route::post('guide_type_edit_post','guideController@guide_type_edit_post');
 
 Route::get('supplier_table','guideController@supplier_table');
+Route::get('supplier_table_add','guideController@supplier_table_add');
+Route::post('supplier_table_post','guideController@supplier_table_post');
 Route::get('supplier_edit/{id}','guideController@supplier_edit');
 Route::post('supplier_edit_post','guideController@supplier_edit_post');
 
 
-// Import
+// Attachment
+Route::get('attachment_table','attachmentController@attachment_table');
+Route::get('attachment_add', 'attachmentController@attachment_add');
+Route::post('attachment_add_post', 'attachmentController@attachment_add_post');
+Route::get('attachment_edit/{id}','attachmentController@attachment_edit');
+Route::post('attachment_update_post','attachmentController@attachment_update_post');
 
+Route::get('attachment_type_table','attachmentController@attachment_type_table');
+Route::get('attachment_type_edit/{id}','attachmentController@attachment_type_edit');
+Route::post('attachment_type_edit_post','attachmentController@attachment_type_edit_post');
+
+
+
+// Import
 Route::get('import','importController@index');
 Route::post('postUpdateRemark', 'importController@postUpdateRemark');
 Route::post('postUpdateInfo', 'importController@postUpdateInfo');

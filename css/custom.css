@@ -435,3 +435,20 @@ html>body #sortable1 #sortable2 #sortable3 #sortable4 #sortable5 li {
 table  { border-collapse: collapse; width: 100%; }
 th, td { padding: 8px 16px; }
 th     { background:#eee; }
+
+
+
+
+.red-text {
+    color: black !important;
+    font-size: 18px;
+    font-weight: bold;
+    text-align: center;
+}
+
+.red-total {
+    color: red !important;
+    font-size: 25px;
+    font-weight: bold;
+    text-align: center;
+}

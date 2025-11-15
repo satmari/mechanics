@@ -18,6 +18,10 @@
 	<link href="{{ asset('/css/choosen.css') }}" rel='stylesheet' type='text/css'>
 
 	<link href="{{ asset('/css/select2.min.css') }}" rel='stylesheet' type='text/css'>
+
+	<!-- DataTables CSS -->
+	<!-- <link href="{{ asset('/css/jquery.dataTables.min.css') }}" rel='stylesheet' type='text/css'> -->
+
 	<link rel="manifest" href="{{ asset('/manifest.json') }}">
 
 	
@@ -70,9 +74,24 @@
 							<li class="dropdown">
 								<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">Guides<span class="caret"></span></a>
 								<ul class="dropdown-menu" role="menu">
-									<li><a href="{{ url('guide_table') }}">Guide table</a></li>
+									<li><a href="{{ url('guides') }}">Guide table</a></li>
 									<li role="separator" class="divider"></li>
-									<li><a href="{{ url('guide_type_table') }}">Guide type table</a></li>
+									<li><a href="{{ url('guide_type_table') }}">Guide Type</a></li>
+									<li role="separator" class="divider"></li>
+									<li><a href="{{ url('guide_location_table') }}">Guide Locations</a></li>
+									<li role="separator" class="divider"></li>
+									<li><a href="{{ url('supplier_table') }}">Supplier table</a></li>
+									
+								</ul>
+							</li>
+							<li class="dropdown">
+								<a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">Attachments<span class="caret"></span></a>
+								<ul class="dropdown-menu" role="menu">
+									<li><a href="{{ url('attachments') }}">Attachments table</a></li>
+									<li role="separator" class="divider"></li>
+									<li><a href="{{ url('attachmet_type_table') }}">Attachments Type</a></li>
+									<li role="separator" class="divider"></li>
+									<li><a href="{{ url('attachmets_locations') }}">Attachment Locations</a></li>
 									<li role="separator" class="divider"></li>
 									<li><a href="{{ url('supplier_table') }}">Supplier table</a></li>
 									
@@ -112,22 +131,25 @@
 	<!-- Scripts -->
 	<script src="{{ asset('/js/jquery.min.js') }}" type="text/javascript" ></script>
 	<script src="{{ asset('/js/jquery-ui.min.js') }}" type="text/javascript" ></script>
-	<script src="{{ asset('/js/jquery-2.1.1.min.js') }}" type="text/javascript" ></script>
+	<!-- <script src="{{ asset('/js/jquery-2.1.1.min.js') }}" type="text/javascript" ></script>-->
     <script src="{{ asset('/js/bootstrap.min.js') }}" type="text/javascript" ></script>
     <script src="{{ asset('/js/bootstrap-table.js') }}" type="text/javascript" ></script>
-	
+	<script src="{{ asset('/js/bootstrap-table-export.js') }}" type="text/javascript" ></script>
+
 	<!-- <script src="{{ asset('/js/jquery.dataTables.min.js') }}" type="text/javascript" ></script>-->
 	<!--<script src="{{ asset('/js/jquery.tablesorter.min.js') }}" type="text/javascript" ></script>-->
 	<!--<script src="{{ asset('/js/custom.js') }}" type="text/javascript" ></script>-->
-	<script src="{{ asset('/js/tableExport.js') }}" type="text/javascript" ></script>
+	<script src="{{ asset('/js/tableExport.js') }}" type="text/javascript"></script>
 	<!--<script src="{{ asset('/js/jspdf.plugin.autotable.js') }}" type="text/javascript" ></script>-->
 	<!--<script src="{{ asset('/js/jspdf.min.js') }}" type="text/javascript" ></script>-->
 	<script src="{{ asset('/js/FileSaver.min.js') }}" type="text/javascript" ></script>
-	<script src="{{ asset('/js/bootstrap-table-export.js') }}" type="text/javascript" ></script>
-	<script src="{{ asset('/js/choosen.js') }}" type="text/javascript" ></script>
-	<script src="{{ asset('/js/select2.min.js') }}" type="text/javascript" ></script>
-
 	
+	<script src="{{ asset('/js/select2.min.js') }}" type="text/javascript"></script>
+	<script src="{{ asset('/js/choosen.js') }}" type="text/javascript"></script>
+	
+
+	<!-- DataTables JS -->
+	<script src="{{ asset('/js/jquery.dataTables.min.js') }}"></script>
 	
 	
 
@@ -389,5 +411,88 @@ $(document).ready(function() {
 
 */
 </script>
+<!-- Main global filter -->
+<script>
+$(document).ready(function() {
+
+    $('#filter').on('keyup', function() {
+        var value = $(this).val().toLowerCase();
+        $('#sort tbody tr').filter(function() {
+            $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+        });
+    });
+
+});
+</script>
+
+<!-- Correct fixed column filters -->
+
+<script>
+$(document).ready(function() {
+    try {
+        // 1️⃣ Check if jQuery is loaded
+        if (typeof $ === 'undefined') {
+            console.error("jQuery is not loaded!");
+            return;
+        } else {
+            console.log("✅ jQuery is loaded.");
+        }
+
+        // 2️⃣ Check if table exists
+        let table = $('#sort');
+        if (table.length === 0) {
+            console.error("Table #sort not found!");
+            return;
+        } else {
+            console.log("✅ Table #sort exists with", table.find('tbody tr').length, "rows.");
+        }
+
+        // 3️⃣ Check if column filters exist
+        let filters = table.find('.column-filter');
+        if (filters.length === 0) {
+            console.error("No .column-filter inputs found!");
+            return;
+        } else {
+            console.log("✅ Found", filters.length, "column filters.");
+        }
+
+        // 4️⃣ Bind delegated keyup for filtering
+        table.on('keyup', '.column-filter', function(e) {
+            try {
+                let input = $(this);
+                console.log("Keyup in column-filter:", input.data('column'), input.val());
+
+                table.find('tbody tr').each(function() {
+                    let row = $(this);
+                    let show = true;
+
+                    filters.each(function() {
+                        let colIndex = $(this).data('column');
+                        let filterValue = $(this).val().toLowerCase();
+                        let td = row.find('td').eq(colIndex);
+                        if(filterValue && td.length){
+                            if(td.text().toLowerCase().indexOf(filterValue) === -1){
+                                show = false;
+                                return false; // break inner loop
+                            }
+                        }
+                    });
+
+                    row.toggle(show);
+                });
+
+            } catch(innerErr) {
+                console.error("Error filtering row:", innerErr);
+            }
+        });
+
+        console.log("✅ Column filter script initialized successfully.");
+
+    } catch(err) {
+        console.error("General script error:", err);
+    }
+});
+</script>
+
 </body>
 </html>

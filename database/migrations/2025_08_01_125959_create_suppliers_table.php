@@ -16,7 +16,7 @@ class CreateSuppliersTable extends Migration {
 		{
 			$table->increments('id');
 
-			$table->string('supplier');
+			$table->string('supplier')->unique();
 			$table->string('location')->nullable();
 			$table->string('contact')->nullable();
 

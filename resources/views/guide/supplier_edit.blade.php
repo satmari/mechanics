@@ -9,20 +9,11 @@
                     Edit Supplier Information:
                 </div>
 
-                @if (session('success'))
-                    <div class="panel-heading">
-                        <small><i>&nbsp;&nbsp;&nbsp; <span style="color:green"><b>{{ session('success') }}</b></span></i></small>
-                    </div>
+                @if(isset($msge))
+                    <div class="alert alert-danger">{{ $msge }}</div>
                 @endif
-
-                @if ($errors->any())
-                    <div class="panel-body">
-                        <ul class="alert alert-danger list-unstyled">
-                            @foreach ($errors->all() as $error)
-                                <li><i class="glyphicon glyphicon-exclamation-sign"></i> {{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
+                @if(isset($msgs))
+                    <div class="alert alert-success">{{ $msgs }}</div>
                 @endif
 
                 {!! Form::open(['url' => 'supplier_edit_post']) !!}
@@ -30,11 +21,11 @@
                     <div class="panel-body">
                         {!! Form::hidden('id', $id) !!}
 
-                        <p>Guide Type:</p>
+                        <p>Supplier:</p>
                         {!! Form::text('supplier', $supplier, ['class' => 'form-control', 'required' => true]) !!}
                         <br>
 
-                        <p>Description:</p>
+                        <p>Location:</p>
                         {!! Form::text('location', $location, ['class' => 'form-control']) !!}
                         <br>
 
@@ -47,11 +38,26 @@
 
                 {!! Form::close() !!}
 
-                <hr>
+                <!-- hr>
                 <a href="{{ url('guide_type_table') }}" class="btn btn-default btn-lg center-block">Back</a>
-                <br><br>
+                <br><br> -->
             </div>
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    const submitButton = form.querySelector('input[type="submit"]');
+
+    submitButton.addEventListener('click', function(event) {
+        const password = prompt("Enter password to confirm update:");
+        if (password !== "1234") {
+            event.preventDefault();
+            alert("Incorrect password. Update canceled.");
+        }
+    });
+});
+</script>
 @endsection
